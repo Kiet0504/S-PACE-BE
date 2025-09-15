@@ -1,0 +1,44 @@
+package com.example.S_PACE.pojo;
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import jakarta.persistence.*;
+import lombok.*;
+import lombok.experimental.FieldDefaults;
+import org.hibernate.annotations.GenericGenerator;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.UUID;
+
+@FieldDefaults(level = AccessLevel.PRIVATE)
+@Getter
+@Setter
+@Entity
+@Table(name = "taskReports")
+@NoArgsConstructor
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+public class TaskReports {
+
+    @Id
+    @GeneratedValue(generator = "uuid2")
+    @GenericGenerator(name = "uuid2", strategy = "uuid2")
+    @Column(columnDefinition = "BINARY(16)")
+    UUID taskReportsId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "eventTasksId", referencedColumnName = "eventTasksId", nullable = false)
+    EventTasks eventTasks;
+
+    @Column(nullable = false, precision = 5, scale = 2)
+    BigDecimal progress;
+
+    @Lob
+    String note;
+
+    @Column(nullable = false, updatable = false)
+    LocalDateTime reportedAt = LocalDateTime.now();
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "userId")
+    User reportedBy;
+}
