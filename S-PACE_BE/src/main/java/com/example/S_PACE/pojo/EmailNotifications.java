@@ -45,7 +45,7 @@ public class EmailNotifications {
     @Column(nullable = false, length = 255)
     String subject;
 
-    @Lob
+    @Column(columnDefinition = "TEXT")
     String content;
 
     @CreationTimestamp

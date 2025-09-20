@@ -33,8 +33,7 @@ public class Certificates {
     @JoinColumn(name = "userId", referencedColumnName = "userId", nullable = false)
     User user;
 
-    @Lob
-    @Column(name = "certificate_data")
+    @Column(name = "certificate_data", columnDefinition = "BYTEA")
     byte[] certificateData;
 
     @Column(length = 500)

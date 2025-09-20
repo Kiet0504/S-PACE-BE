@@ -10,6 +10,7 @@ import org.hibernate.annotations.GenericGenerator;
 
 import java.util.List;
 import java.util.UUID;
+import java.math.BigDecimal;
 
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @Getter
@@ -41,10 +42,10 @@ public class Plan {
     Integer maxEmployee;
     Integer maxEventPerMonth;
     Integer maxCollaborators;
-    double price;
+    BigDecimal price;
     int durationMonth;
 
-    @Lob
+    @Column(columnDefinition = "TEXT")
     String features;
 
     @Enumerated(EnumType.STRING)

@@ -38,7 +38,7 @@ public class EventTasks {
     @Column(nullable = false, length = 255)
     String title;
 
-    @Lob
+    @Column(columnDefinition = "TEXT")
     String description;
 
     @Column(nullable = false)

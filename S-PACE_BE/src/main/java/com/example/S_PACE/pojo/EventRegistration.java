@@ -40,7 +40,7 @@ public class EventRegistration {
     @Column(nullable = false, updatable = false)
     LocalDateTime registrationDate;
 
-    @Lob
+    @Column(columnDefinition = "TEXT")
     String registrationData;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -49,7 +49,7 @@ public class EventRegistration {
 
     LocalDateTime reviewedAt;
 
-    @Lob
+    @Column(columnDefinition = "TEXT")
     String reviewNotes;
 
     @Enumerated(EnumType.STRING)

@@ -38,7 +38,7 @@ public class Event {
     @Column(nullable = false, length = 255)
     String title;
 
-    @Lob
+    @Column(columnDefinition = "TEXT")
     String description;
 
     String location;

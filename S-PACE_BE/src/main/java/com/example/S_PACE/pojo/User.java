@@ -32,6 +32,10 @@ public class User {
     @JoinColumn(name = "teamId", referencedColumnName = "teamId")
     Team team;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "companyId")
+    Company company;
+
     @Column(nullable = false, length = 100)
     String fullName;
 

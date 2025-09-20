@@ -32,7 +32,7 @@ public class TaskReports {
     @Column(nullable = false, precision = 5, scale = 2)
     BigDecimal progress;
 
-    @Lob
+    @Column(columnDefinition = "TEXT")
     String note;
 
     @Column(nullable = false, updatable = false)
