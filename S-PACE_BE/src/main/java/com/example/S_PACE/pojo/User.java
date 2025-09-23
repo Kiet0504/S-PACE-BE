@@ -14,35 +14,36 @@ import java.util.UUID;
 @Getter
 @Setter
 @Entity
-@Table(name = "user")
+@Table(name = "\"user\"")
 @NoArgsConstructor
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class User {
-    @Id
-    @GeneratedValue(generator = "uuid2")
-    @GenericGenerator(name = "uuid2", strategy = "uuid2")
-    @Column(columnDefinition = "BINARY(16)")
-    UUID userId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "roleId", referencedColumnName = "roleId", nullable = false)
+    @Id
+    @GeneratedValue(generator = "UUID")
+    @GenericGenerator(name = "UUID", strategy = "org.hibernate.id.UUIDGenerator")
+    @Column(name = "user_id")
+    private UUID userId;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "role_id", referencedColumnName = "role_id", nullable = false)
     Role role;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "teamId", referencedColumnName = "teamId")
+    @JoinColumn(name = "team_id", referencedColumnName = "team_id")
     Team team;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "companyId")
+    @JoinColumn(name = "company_id", referencedColumnName = "company_id")
     Company company;
 
-    @Column(nullable = false, length = 100)
+    @Column(name = "full_name", nullable = false, length = 100)
     String fullName;
 
     @Column(nullable = false, unique = true, length = 150)
     String email;
 
-    @Column(nullable = false)
+    @Column(name = "password_hash", nullable = false)
     String passwordHash;
 
     String avatar;
@@ -53,10 +54,15 @@ public class User {
     @Column(length = 255)
     String address;
 
-    @Column(nullable = false)
-    LocalDateTime createdAt = LocalDateTime.now();
+    @Column(name = "created_at", nullable = false, updatable = false)
+    LocalDateTime createdAt;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     UserStatus status = UserStatus.PENDING;
+
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+    }
 }

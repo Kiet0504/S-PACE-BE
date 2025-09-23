@@ -30,8 +30,8 @@ CREATE TABLE payment (
 );
 
 CREATE TABLE role (
-    role_id UUID NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
-    name VARCHAR(255),
+    role_id SERIAL PRIMARY KEY,
+    role_name VARCHAR(255),
     description VARCHAR(255)
 );
 
@@ -60,7 +60,7 @@ CREATE TABLE team (
 
 CREATE TABLE "user" (
     user_id UUID NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
-    role_id UUID NOT NULL,
+    role_id INTEGER NOT NULL,
     team_id UUID,
     company_id UUID,
     full_name VARCHAR(100) NOT NULL,
@@ -165,10 +165,10 @@ CREATE INDEX idx_attendance_user ON attendance_logs(user_id);
 CREATE INDEX idx_registration_event ON event_registration(event_id);
 CREATE INDEX idx_registration_user ON event_registration(user_id);
 
-INSERT INTO role (role_id, name, description) VALUES
-    (gen_random_uuid(), 'ADMIN', 'System Administrator'),
-    (gen_random_uuid(), 'COMPANY_ADMIN', 'Company Administrator'),
-    (gen_random_uuid(), 'EVENT_MANAGER', 'Event Manager'),
-    (gen_random_uuid(), 'TEAM_LEADER', 'Team Leader'),
-    (gen_random_uuid(), 'EMPLOYEE', 'Regular Employee'),
-    (gen_random_uuid(), 'PARTICIPANT', 'Event Participant');
+INSERT INTO role (role_name, description) VALUES
+    ('ADMIN', 'System Administrator'),
+    ('COMPANY_ADMIN', 'Company Administrator'),
+    ('EVENT_MANAGER', 'Event Manager'),
+    ('TEAM_LEADER', 'Team Leader'),
+    ('EMPLOYEE', 'Regular Employee'),
+    ('PARTICIPANT', 'Event Participant');

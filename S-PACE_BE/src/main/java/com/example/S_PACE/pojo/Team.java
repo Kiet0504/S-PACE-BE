@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
-import org.hibernate.annotations.GenericGenerator;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -18,25 +17,25 @@ import java.util.UUID;
 @NoArgsConstructor
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Team {
+
     @Id
-    @GeneratedValue(generator = "uuid2")
-    @GenericGenerator(name = "uuid2", strategy = "uuid2")
-    @Column(columnDefinition = "BINARY(16)")
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    @Column(name = "team_id")
     UUID teamId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "eventId", referencedColumnName = "eventId", nullable = false)
+    @JoinColumn(name = "event_id", referencedColumnName = "event_id", nullable = false)
     Event event;
 
     @OneToMany(mappedBy = "team", fetch = FetchType.LAZY)
     List<User> members;
 
-    @Column(nullable = false, length = 100)
+    @Column(name = "team_name", nullable = false, length = 100)
     String teamName;
 
     @Column(nullable = false)
     int quantity;
 
-    @Column(nullable = false)
+    @Column(name = "created_at", nullable = false)
     LocalDateTime createdAt = LocalDateTime.now();
 }

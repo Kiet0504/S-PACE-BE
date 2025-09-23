@@ -5,29 +5,38 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="6758ea80-352d-4b39-904a-7c24faa7dec3" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/S-PACE_BE/docker-compose-dev.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/S-PACE_BE/init-database.sql" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/S-PACE_BE/src/main/java/com/example/S_PACE/config/DatabaseConnectionTest.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/S-PACE_BE/src/main/java/com/example/S_PACE/controller/HealthController.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/S-PACE_BE/src/main/java/com/example/S_PACE/repository/UserRepository.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/S-PACE_BE/src/main/resources/application-dev.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/S-PACE_BE/src/main/resources/application-test.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/S-PACE_BE/src/main/resources/db/migration/V1__Initial_Schema.sql" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/S-PACE_BE/start-app.sh" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/compiler.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/S-PACE_BE/mvnw" beforeDir="false" afterPath="$PROJECT_DIR$/S-PACE_BE/mvnw" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/S-PACE_BE/mvnw.cmd" beforeDir="false" afterPath="$PROJECT_DIR$/S-PACE_BE/mvnw.cmd" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/compiler.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/encodings.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/jarRepositories.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/S-PACE_BE/docker-compose-dev.yml" beforeDir="false" afterPath="$PROJECT_DIR$/S-PACE_BE/docker-compose-dev.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/S-PACE_BE/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/S-PACE_BE/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/S-PACE_BE/src/main/java/com/example/S_PACE/SPaceApplication.java" beforeDir="false" afterPath="$PROJECT_DIR$/S-PACE_BE/src/main/java/com/example/S_PACE/SPaceApplication.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/S-PACE_BE/src/main/java/com/example/S_PACE/config/DatabaseConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/S-PACE_BE/src/main/java/com/example/S_PACE/config/DatabaseConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/S-PACE_BE/src/main/java/com/example/S_PACE/controller/HealthController.java" beforeDir="false" afterPath="$PROJECT_DIR$/S-PACE_BE/src/main/java/com/example/S_PACE/controller/HealthController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/S-PACE_BE/src/main/java/com/example/S_PACE/enums/ErrorStatus.java" beforeDir="false" afterPath="$PROJECT_DIR$/S-PACE_BE/src/main/java/com/example/S_PACE/enums/ErrorStatus.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/S-PACE_BE/src/main/java/com/example/S_PACE/enums/UserStatus.java" beforeDir="false" afterPath="$PROJECT_DIR$/S-PACE_BE/src/main/java/com/example/S_PACE/enums/UserStatus.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/S-PACE_BE/src/main/java/com/example/S_PACE/pojo/AttendanceLogs.java" beforeDir="false" afterPath="$PROJECT_DIR$/S-PACE_BE/src/main/java/com/example/S_PACE/pojo/AttendanceLogs.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/S-PACE_BE/src/main/java/com/example/S_PACE/pojo/Certificates.java" beforeDir="false" afterPath="$PROJECT_DIR$/S-PACE_BE/src/main/java/com/example/S_PACE/pojo/Certificates.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/S-PACE_BE/src/main/java/com/example/S_PACE/pojo/Company.java" beforeDir="false" afterPath="$PROJECT_DIR$/S-PACE_BE/src/main/java/com/example/S_PACE/pojo/Company.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/S-PACE_BE/src/main/java/com/example/S_PACE/pojo/EmailNotifications.java" beforeDir="false" afterPath="$PROJECT_DIR$/S-PACE_BE/src/main/java/com/example/S_PACE/pojo/EmailNotifications.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/S-PACE_BE/src/main/java/com/example/S_PACE/pojo/Event.java" beforeDir="false" afterPath="$PROJECT_DIR$/S-PACE_BE/src/main/java/com/example/S_PACE/pojo/Event.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/S-PACE_BE/src/main/java/com/example/S_PACE/pojo/EventRegistration.java" beforeDir="false" afterPath="$PROJECT_DIR$/S-PACE_BE/src/main/java/com/example/S_PACE/pojo/EventRegistration.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/S-PACE_BE/src/main/java/com/example/S_PACE/pojo/EventTasks.java" beforeDir="false" afterPath="$PROJECT_DIR$/S-PACE_BE/src/main/java/com/example/S_PACE/pojo/EventTasks.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/S-PACE_BE/src/main/java/com/example/S_PACE/pojo/Payment.java" beforeDir="false" afterPath="$PROJECT_DIR$/S-PACE_BE/src/main/java/com/example/S_PACE/pojo/Payment.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/S-PACE_BE/src/main/java/com/example/S_PACE/pojo/Plan.java" beforeDir="false" afterPath="$PROJECT_DIR$/S-PACE_BE/src/main/java/com/example/S_PACE/pojo/Plan.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/S-PACE_BE/src/main/java/com/example/S_PACE/pojo/Role.java" beforeDir="false" afterPath="$PROJECT_DIR$/S-PACE_BE/src/main/java/com/example/S_PACE/pojo/Role.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/S-PACE_BE/src/main/java/com/example/S_PACE/pojo/TaskReports.java" beforeDir="false" afterPath="$PROJECT_DIR$/S-PACE_BE/src/main/java/com/example/S_PACE/pojo/TaskReports.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/S-PACE_BE/src/main/java/com/example/S_PACE/pojo/Team.java" beforeDir="false" afterPath="$PROJECT_DIR$/S-PACE_BE/src/main/java/com/example/S_PACE/pojo/Team.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/S-PACE_BE/src/main/java/com/example/S_PACE/pojo/User.java" beforeDir="false" afterPath="$PROJECT_DIR$/S-PACE_BE/src/main/java/com/example/S_PACE/pojo/User.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/S-PACE_BE/src/main/java/com/example/S_PACE/repository/UserRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/S-PACE_BE/src/main/java/com/example/S_PACE/repository/UserRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/S-PACE_BE/src/main/resources/application-prod.yml" beforeDir="false" afterPath="$PROJECT_DIR$/S-PACE_BE/src/main/resources/application-prod.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/S-PACE_BE/src/main/resources/application.yml" beforeDir="false" afterPath="$PROJECT_DIR$/S-PACE_BE/src/main/resources/application.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/S-PACE_BE/src/main/resources/db/migration/V1__Initial_Schema.sql" beforeDir="false" afterPath="$PROJECT_DIR$/S-PACE_BE/src/main/resources/db/migration/V1__Initial_Schema.sql" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/org/example/Main.java" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -38,8 +47,8 @@
     <option name="RECENT_TEMPLATES">
       <list>
         <option value="Enum" />
-        <option value="Interface" />
         <option value="Class" />
+        <option value="Interface" />
       </list>
     </option>
   </component>

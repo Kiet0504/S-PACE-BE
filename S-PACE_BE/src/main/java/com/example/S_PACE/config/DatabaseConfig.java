@@ -13,8 +13,12 @@ import java.sql.SQLException;
 import java.sql.Statement;
 
 @Slf4j
+
+
 @Configuration
 public class DatabaseConfig {
+
+
 
     @Value("${spring.datasource.url}")
     private String databaseUrl;

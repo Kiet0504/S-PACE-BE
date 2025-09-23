@@ -20,13 +20,12 @@ import java.util.UUID;
 public class Payment {
 
     @Id
-    @GeneratedValue(generator = "uuid2")
-    @GenericGenerator(name = "uuid2", strategy = "uuid2")
-    @Column(columnDefinition = "BINARY(16)")
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    @Column(name = "payment_id")
     UUID paymentId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "planId", referencedColumnName = "planId", nullable = false)
+    @JoinColumn(name = "plan_id", referencedColumnName = "plan_id", nullable = false)
     Plan plan;
 
     @Column(nullable = false)

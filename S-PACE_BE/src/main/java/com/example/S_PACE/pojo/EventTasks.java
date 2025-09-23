@@ -22,17 +22,16 @@ import java.util.UUID;
 public class EventTasks {
 
     @Id
-    @GeneratedValue(generator = "uuid2")
-    @GenericGenerator(name = "uuid2", strategy = "uuid2")
-    @Column(columnDefinition = "BINARY(16)")
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    @Column(name = "event_tasks_id")
     UUID eventTasksId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "teamId", referencedColumnName = "teamId", nullable = false)
+    @JoinColumn(name = "team_id", referencedColumnName = "team_id", nullable = false)
     Team team;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "assignedTo", referencedColumnName = "userId")
+    @JoinColumn(name = "assignedTo", referencedColumnName = "user_id")
     User assignedTo;
 
     @Column(nullable = false, length = 255)

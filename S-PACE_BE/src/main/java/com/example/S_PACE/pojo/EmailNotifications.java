@@ -21,21 +21,20 @@ import java.util.UUID;
 public class EmailNotifications {
 
     @Id
-    @GeneratedValue(generator = "uuid2")
-    @GenericGenerator(name = "uuid2", strategy = "uuid2")
-    @Column(columnDefinition = "BINARY(16)")
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    @Column(name = "email_notifications_id")
     UUID emailNotificationsId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "eventId", referencedColumnName = "eventId")
+    @JoinColumn(name = "event_id", referencedColumnName = "event_id")
     Event event;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "userId", referencedColumnName = "userId", nullable = false)
+    @JoinColumn(name = "user_id", referencedColumnName = "user_id", nullable = false)
     User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "eventRegistrationId", referencedColumnName = "eventRegistrationId")
+    @JoinColumn(name = "event_registration_id", referencedColumnName = "event_registration_id")
     EventRegistration eventRegistration;
 
     @Enumerated(EnumType.STRING)

@@ -1,5 +1,6 @@
 package com.example.S_PACE.controller;
 
+import com.example.S_PACE.dto.response.ResponseDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,17 +22,17 @@ public class HealthController {
     private DataSource dataSource;
 
     @GetMapping("/database")
-    public ResponseEntity<Map<String, Object>> databaseHealth() {
+    public ResponseEntity<ResponseDTO<Map<String, Object>>> databaseHealth() {
         Map<String, Object> status = new HashMap<>();
         try (Connection connection = dataSource.getConnection()) {
             status.put("status", "UP");
             status.put("database", connection.getMetaData().getDatabaseProductName());
             status.put("url", connection.getMetaData().getURL());
-            return ResponseEntity.ok(status);
+            return ResponseEntity.ok(new ResponseDTO<>(true, "Database health check successful", status));
         } catch (SQLException e) {
             status.put("status", "DOWN");
             status.put("error", e.getMessage());
-            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(status);
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(new ResponseDTO<>(false, "Database connection failed", status));
         }
     }
 }

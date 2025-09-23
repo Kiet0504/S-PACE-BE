@@ -23,13 +23,12 @@ import java.util.UUID;
 public class Event {
 
     @Id
-    @GeneratedValue(generator = "uuid2")
-    @GenericGenerator(name = "uuid2", strategy = "uuid2")
-    @Column(columnDefinition = "BINARY(16)")
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    @Column(name = "event_id")
     UUID eventId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "companyId", referencedColumnName = "companyId", nullable = false)
+    @JoinColumn(name = "company_id", referencedColumnName = "company_id", nullable = false)
     Company company;
 
     @OneToMany(mappedBy = "event", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
@@ -44,14 +43,14 @@ public class Event {
     String location;
     String picture;
 
-    @Column(nullable = false)
+    @Column(name = "start_date", nullable = false)
     LocalDate startDate;
 
-    @Column(nullable = false)
+    @Column(name = "end_date", nullable = false)
     LocalDate endDate;
 
     @CreationTimestamp
-    @Column(updatable = false)
+    @Column(name = "created_at", updatable = false)
     LocalDateTime createdAt;
 
     @Enumerated(EnumType.STRING)

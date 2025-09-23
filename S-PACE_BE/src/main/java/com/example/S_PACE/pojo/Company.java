@@ -20,9 +20,8 @@ import java.util.UUID;
 public class Company {
 
     @Id
-    @GeneratedValue(generator = "uuid2")
-    @GenericGenerator(name = "uuid2", strategy = "uuid2")
-    @Column(columnDefinition = "BINARY(16)")
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    @Column(name = "company_id")
     UUID companyId;
 
     @OneToOne(mappedBy = "company", fetch = FetchType.LAZY)

@@ -20,13 +20,12 @@ import java.util.UUID;
 public class TaskReports {
 
     @Id
-    @GeneratedValue(generator = "uuid2")
-    @GenericGenerator(name = "uuid2", strategy = "uuid2")
-    @Column(columnDefinition = "BINARY(16)")
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    @Column(name = "task_reports_id")
     UUID taskReportsId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "eventTasksId", referencedColumnName = "eventTasksId", nullable = false)
+    @JoinColumn(name = "event_tasks_id", referencedColumnName = "event_tasks_id", nullable = false)
     EventTasks eventTasks;
 
     @Column(nullable = false, precision = 5, scale = 2)
@@ -39,6 +38,6 @@ public class TaskReports {
     LocalDateTime reportedAt = LocalDateTime.now();
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "userId")
+    @JoinColumn(name = "user_id")
     User reportedBy;
 }

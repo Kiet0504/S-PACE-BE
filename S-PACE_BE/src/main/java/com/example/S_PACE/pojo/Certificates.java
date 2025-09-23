@@ -19,18 +19,17 @@ import java.util.UUID;
 public class Certificates {
 
     @Id
-    @GeneratedValue(generator = "uuid2")
-    @GenericGenerator(name = "uuid2", strategy = "uuid2")
-    @Column(columnDefinition = "BINARY(16)")
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    @Column(name = "certificates_id")
     UUID certificatesId;
 
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "eventId", referencedColumnName = "eventId", nullable = false)
+    @JoinColumn(name = "event_id", referencedColumnName = "event_id", nullable = false)
     Event event;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "userId", referencedColumnName = "userId", nullable = false)
+    @JoinColumn(name = "user_id", referencedColumnName = "user_id", nullable = false)
     User user;
 
     @Column(name = "certificate_data", columnDefinition = "BYTEA")
