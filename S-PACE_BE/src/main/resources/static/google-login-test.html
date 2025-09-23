@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google OAuth Login Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .button {
+            display: inline-block;
+            background: #4285f4;
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 10px;
+            font-weight: bold;
+        }
+        .button:hover {
+            background: #3367d6;
+        }
+        .info {
+            background: #e8f0fe;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .endpoint {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Ì¥ê Google OAuth Login Test</h1>
+        
+        <div class="info">
+            <h3>Ì≥ã Test Instructions:</h3>
+            <ol>
+                <li>Click the "Login with Google" button below</li>
+                <li>You'll be redirected to Google's OAuth consent screen</li>
+                <li>Sign in with your Google account and grant permissions</li>
+                <li>You'll be redirected back with a JWT token and user info</li>
+            </ol>
+        </div>
+
+        <div style="text-align: center;">
+            <a href="/api/auth/google" class="button">Ì∫Ä Login with Google</a>
+        </div>
+
+        <h3>Ì¥ó Available Endpoints:</h3>
+        <div class="endpoint">GET /api/auth/google - Start Google OAuth login</div>
+        <div class="endpoint">GET /oauth2/authorization/google - Direct OAuth2 authorization</div>
+        <div class="endpoint">GET /api/auth/google/success - Success callback</div>
+
+        <h3>Ì≥ù Expected Response:</h3>
+        <div class="endpoint">
+{
+  "success": true,
+  "message": "Google login successful",
+  "token": "eyJhbGciOiJIUzUxMiJ9...",
+  "tokenType": "Bearer",
+  "user": {
+    "userId": "uuid-here",
+    "fullName": "User Name",
+    "email": "user@gmail.com",
+    "avatar": "https://lh3.googleusercontent.com/...",
+    "status": "ACTIVE",
+    "role": {
+      "roleId": 1,
+      "roleName": "COLLABORATOR",
+      "description": "Collaborator role"
+    }
+  }
+}
+        </div>
+
+        <div class="info">
+            <h3>‚ö†Ô∏è Note:</h3>
+            <p>Swagger UI cannot test OAuth flows directly due to CORS restrictions. Use this page or test directly in your browser.</p>
+        </div>
+    </div>
+</body>
+</html>

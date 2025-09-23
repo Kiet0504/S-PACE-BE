@@ -1,6 +1,6 @@
 spring:
   profiles:
-    active: ${SPRING_PROFILES_ACTIVE:dev}
+    active: ${SPRING_PROFILES_ACTIVE:dev,oauth}
 
   datasource:
     url: jdbc:postgresql://localhost:5432/space_db_dev
@@ -68,7 +68,25 @@ spring:
       max-wait: 2000ms
 
   security:
-    oauth2.resourceserver.jwt.jwk-set-uri: ${JWK_SET_URI:}
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${JWK_SET_URI:}
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID:720440096298-6derr612hrvjof7bobr8p0s75amcjgqi.apps.googleusercontent.com}
+            client-secret: ${GOOGLE_CLIENT_SECRET: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}
+            scope:
+              - email
+              - profile
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+        provider:
+          google:
+            authorization-uri: https://accounts.google.com/o/oauth2/auth
+            token-uri: https://oauth2.googleapis.com/token
+            user-info-uri: https://www.googleapis.com/oauth2/v2/userinfo
+            user-name-attribute: id
 
 jwt:
   secret: ${JWT_SECRET:mySecretKeyREDACTED_PASSWORD67890REDACTED_PASSWORD67890REDACTED_PASSWORD67890REDACTED_PASSWORD67890REDACTED_PASSWORD67890REDACTED_PASSWORD67890}

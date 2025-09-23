@@ -50,7 +50,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             "/public",
             "/error",
             "/favicon.ico",
-            "/h2-console"
+            "/h2-console",
+
+            "/api/auth/google",
+            "/login/oauth2",
+            "/oauth2"
     );
 
     @Override
