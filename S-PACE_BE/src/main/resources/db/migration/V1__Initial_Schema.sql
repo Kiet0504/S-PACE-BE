@@ -171,7 +171,6 @@ CREATE INDEX idx_attendance_user ON attendance_logs(user_id);
 CREATE INDEX idx_registration_event ON event_registration(event_id);
 CREATE INDEX idx_registration_user ON event_registration(user_id);
 -- Thêm index cho các trường mới
-CREATE INDEX idx_registration_type ON event_registration(registration_type);
 CREATE INDEX idx_registration_status ON event_registration(status);
 CREATE INDEX idx_registration_date ON event_registration(registration_date);
 
