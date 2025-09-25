@@ -105,13 +105,19 @@ CREATE TABLE event_registration (
     event_id UUID NOT NULL,
     user_id UUID NOT NULL,
     registration_date TIMESTAMP NOT NULL,
-    registration_data TEXT,
     reviewed_by UUID,
     reviewed_at TIMESTAMP,
     review_notes TEXT,
     status VARCHAR(255) NOT NULL,
     participation_status VARCHAR(255) NOT NULL,
     updated_at TIMESTAMP,
+    full_name VARCHAR(255),
+    gender VARCHAR(20),
+    profession VARCHAR(255),
+    phone_number VARCHAR(20),
+    address TEXT,
+    reason_for_participation TEXT,
+    file_path VARCHAR(500),
     CONSTRAINT fk_registration_event FOREIGN KEY (event_id) REFERENCES event(event_id),
     CONSTRAINT fk_registration_user FOREIGN KEY (user_id) REFERENCES "user"(user_id),
     CONSTRAINT fk_registration_reviewer FOREIGN KEY (reviewed_by) REFERENCES "user"(user_id)
@@ -164,6 +170,10 @@ CREATE INDEX idx_attendance_event ON attendance_logs(event_id);
 CREATE INDEX idx_attendance_user ON attendance_logs(user_id);
 CREATE INDEX idx_registration_event ON event_registration(event_id);
 CREATE INDEX idx_registration_user ON event_registration(user_id);
+-- Thêm index cho các trường mới
+CREATE INDEX idx_registration_type ON event_registration(registration_type);
+CREATE INDEX idx_registration_status ON event_registration(status);
+CREATE INDEX idx_registration_date ON event_registration(registration_date);
 
 INSERT INTO role (role_name, description) VALUES
     ('ADMIN', 'System Administrator'),
@@ -171,4 +181,5 @@ INSERT INTO role (role_name, description) VALUES
     ('EVENT_MANAGER', 'Event Manager'),
     ('TEAM_LEADER', 'Team Leader'),
     ('EMPLOYEE', 'Regular Employee'),
-    ('PARTICIPANT', 'Event Participant');
+    ('PARTICIPANT', 'Event Participant'),
+    ('COLLABORATOR', 'Event Collaborator');

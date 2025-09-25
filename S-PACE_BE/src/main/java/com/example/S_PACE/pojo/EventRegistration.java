@@ -19,6 +19,8 @@ import java.util.UUID;
 @Entity
 @Table(name = "eventRegistration")
 @NoArgsConstructor
+@AllArgsConstructor
+@Builder
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class EventRegistration {
 
@@ -36,29 +38,51 @@ public class EventRegistration {
     User user;
 
     @CreationTimestamp
-    @Column(nullable = false, updatable = false)
+    @Column(name = "registration_date", nullable = false, updatable = false)
     LocalDateTime registrationDate;
 
-    @Column(columnDefinition = "TEXT")
-    String registrationData;
-
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "reviewedBy", referencedColumnName = "user_id")
+    @JoinColumn(name = "reviewed_by", referencedColumnName = "user_id")
     User reviewedBy;
 
+    @Column(name = "reviewed_at")
     LocalDateTime reviewedAt;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "review_notes", columnDefinition = "TEXT")
     String reviewNotes;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(name = "status", nullable = false)
     EventRegistrationStatus status = EventRegistrationStatus.PENDING;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(name = "participation_status", nullable = false)
     ParticipationStatus participationStatus = ParticipationStatus.NOT_ATTENDED;
 
     @UpdateTimestamp
+    @Column(name = "updated_at")
     LocalDateTime updatedAt;
+
+    // ========== THÔNG TIN CỘNG TÁC VIÊN ==========
+
+    @Column(name = "full_name")
+    String fullName;
+
+    @Column(name = "gender")
+    String gender;
+
+    @Column(name = "profession")
+    String profession;
+
+    @Column(name = "phone_number")
+    String phoneNumber;
+
+    @Column(name = "address", columnDefinition = "TEXT")
+    String address;
+
+    @Column(name = "reason_for_participation", columnDefinition = "TEXT")
+    String reasonForParticipation;
+
+    @Column(name = "file_path")
+    String filePath; // Gộp CV và Portfolio thành một file
 }
