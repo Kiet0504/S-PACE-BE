@@ -1,12 +1,3 @@
--- Update existing roles to match new structure
-UPDATE role SET role_name = 'COLLABORATOR', description = 'Collaborator role for external users' WHERE role_id = 1;
-UPDATE role SET role_name = 'ORGANIZER', description = 'Event organizer with management privileges' WHERE role_id = 2;
-UPDATE role SET role_name = 'EMPLOYEE', description = 'Employee with standard access' WHERE role_id = 3;
-UPDATE role SET role_name = 'ADMIN', description = 'System administrator with full access' WHERE role_id = 4;
-
--- Delete unused roles from V1
-DELETE FROM role WHERE role_id IN (5, 6);
-
 -- Add example companies (matching V1 table structure)
 INSERT INTO company (company_id, company_name, address, status) VALUES
     (gen_random_uuid(), 'TechCorp Solutions', '123 Tech Street, Silicon Valley, CA', 'ACTIVE'),

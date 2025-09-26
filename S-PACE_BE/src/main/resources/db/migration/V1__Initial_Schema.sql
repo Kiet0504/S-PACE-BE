@@ -180,5 +180,4 @@ INSERT INTO role (role_name, description) VALUES
     ('EVENT_MANAGER', 'Event Manager'),
     ('TEAM_LEADER', 'Team Leader'),
     ('EMPLOYEE', 'Regular Employee'),
-    ('PARTICIPANT', 'Event Participant'),
     ('COLLABORATOR', 'Event Collaborator');
