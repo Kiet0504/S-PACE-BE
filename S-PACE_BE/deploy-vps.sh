@@ -87,8 +87,9 @@ show_deployment_info() {
     echo ""
     echo " Application URLs:"
     echo "   - HTTP: http://REDACTED_IP:8080"
-    echo "   - Health: http://REDACTED_IP:8080/actuator/health"
-    echo "   - API Docs: http://REDACTED_IP:8080/swagger-ui.html"
+    echo "   - HTTPS: https://s-pace.com.vn"
+    echo "   - Health: https://s-pace.com.vn/actuator/health"
+    echo "   - API Docs: https://s-pace.com.vn/swagger-ui.html"
     echo ""
     echo " Container Status:"
     docker-compose -f docker-compose-prod.yml ps
@@ -114,10 +115,11 @@ main() {
         # Check Git status
         check_git_status
         
-        # Pull latest code
-        print_status "Pulling latest code from Git..."
+        # Pull latest code from production branch
+        print_status "Pulling latest code from production branch (product)..."
         git fetch origin
-        git pull origin develop
+        git checkout product
+        git pull origin product
         
         # Show what's being deployed
         print_status "Deploying commit: $(git log -1 --oneline)"
