@@ -19,6 +19,9 @@ public class SwaggerConfig {
     @Value("${server.port:8080}")
     private String serverPort;
 
+    @Value("${swagger.server.url:http://localhost:8080}")
+    private String swaggerServerUrl;
+
     @Bean
     public GroupedOpenApi publicApi() {
         return GroupedOpenApi.builder()
@@ -35,7 +38,7 @@ public class SwaggerConfig {
                     .version("1.0")
                     .description("API documentation for S-PACE application"))
                 .servers(List.of(
-                    new Server().url("http://localhost:" + serverPort).description("Local server")
+                    new Server().url(swaggerServerUrl).description("Production server")
                 ))
                 .addSecurityItem(new SecurityRequirement().addList("bearerAuth"))
                 .components(new Components()
