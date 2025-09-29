@@ -36,6 +36,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/api/auth/**",
+                                "/api/teams",
+                                "/api/event-tasks/**",
                                 "/login/oauth2/**",
                                 "/oauth2/**",
                                 "/swagger-ui/**",
@@ -67,8 +69,9 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(Arrays.asList(
-            "http://localhost:3000", 
-            "http://localhost:3001", 
+            "http://localhost:3000",
+            "http://localhost:3001",
+            "http://localhost:5173",
             "http://localhost:8080",
             "https://s-pace.com.vn",
             "https://www.s-pace.com.vn",
