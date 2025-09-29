@@ -13,7 +13,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class CollaboratorRegistrationResponse {
+public class EventRegistrationResponse {
 
     UUID eventRegistrationId;
     UUID eventId;
@@ -21,7 +21,14 @@ public class CollaboratorRegistrationResponse {
     UUID userId;
     String userEmail;
     LocalDateTime registrationDate;
+    UUID reviewedBy;
+    String reviewedByName;
+    LocalDateTime reviewedAt;
+    String reviewNotes;
     EventRegistrationStatus status;
+    LocalDateTime updatedAt;
+    
+    // Collaborator information
     String fullName;
     String gender;
     String profession;
@@ -29,5 +36,4 @@ public class CollaboratorRegistrationResponse {
     String address;
     String reasonForParticipation;
     String filePath;
-    LocalDateTime updatedAt;
 } 

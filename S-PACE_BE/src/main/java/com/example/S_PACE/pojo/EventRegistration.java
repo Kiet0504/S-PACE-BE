@@ -52,7 +52,6 @@ public class EventRegistration {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
-    @Builder.Default
     EventRegistrationStatus status = EventRegistrationStatus.PENDING;
 
     @UpdateTimestamp

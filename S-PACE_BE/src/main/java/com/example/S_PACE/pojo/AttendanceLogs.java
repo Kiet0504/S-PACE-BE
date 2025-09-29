@@ -1,7 +1,6 @@
 package com.example.S_PACE.pojo;
 
 import com.example.S_PACE.enums.AttendanceStatus;
-import com.example.S_PACE.enums.ParticipationStatus;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
@@ -15,8 +14,6 @@ import java.util.UUID;
 @Entity
 @Table(name = "attendanceLogs")
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class AttendanceLogs {
 
@@ -41,9 +38,4 @@ public class AttendanceLogs {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     AttendanceStatus status;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "participation_status", nullable = false)
-    @Builder.Default
-    ParticipationStatus participationStatus = ParticipationStatus.NOT_ATTENDED;
 }
