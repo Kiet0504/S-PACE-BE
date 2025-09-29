@@ -8,7 +8,6 @@ import lombok.*;
 import lombok.experimental.FieldDefaults;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
-import org.hibernate.annotations.GenericGenerator;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -53,11 +52,8 @@ public class EventRegistration {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
+    @Builder.Default
     EventRegistrationStatus status = EventRegistrationStatus.PENDING;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "participation_status", nullable = false)
-    ParticipationStatus participationStatus = ParticipationStatus.NOT_ATTENDED;
 
     @UpdateTimestamp
     @Column(name = "updated_at")

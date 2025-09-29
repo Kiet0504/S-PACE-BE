@@ -83,6 +83,7 @@ CREATE TABLE attendance_logs (
     check_in_time TIMESTAMP NOT NULL,
     check_out_time TIMESTAMP,
     status VARCHAR(20) NOT NULL,
+    participation_status VARCHAR(255) NOT NULL,
     CONSTRAINT fk_attendance_event FOREIGN KEY (event_id) REFERENCES event(event_id),
     CONSTRAINT fk_attendance_user FOREIGN KEY (user_id) REFERENCES "user"(user_id)
 );
@@ -109,7 +110,6 @@ CREATE TABLE event_registration (
     reviewed_at TIMESTAMP,
     review_notes TEXT,
     status VARCHAR(255) NOT NULL,
-    participation_status VARCHAR(255) NOT NULL,
     updated_at TIMESTAMP,
     full_name VARCHAR(255),
     gender VARCHAR(20),
@@ -180,5 +180,4 @@ INSERT INTO role (role_name, description) VALUES
     ('EVENT_MANAGER', 'Event Manager'),
     ('TEAM_LEADER', 'Team Leader'),
     ('EMPLOYEE', 'Regular Employee'),
-    ('PARTICIPANT', 'Event Participant'),
     ('COLLABORATOR', 'Event Collaborator');

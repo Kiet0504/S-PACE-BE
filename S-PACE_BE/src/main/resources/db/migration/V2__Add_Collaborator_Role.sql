@@ -1,12 +1,3 @@
--- Update existing roles to match new structure
-UPDATE role SET role_name = 'COLLABORATOR', description = 'Collaborator role for external users' WHERE role_id = 1;
-UPDATE role SET role_name = 'ORGANIZER', description = 'Event organizer with management privileges' WHERE role_id = 2;
-UPDATE role SET role_name = 'EMPLOYEE', description = 'Employee with standard access' WHERE role_id = 3;
-UPDATE role SET role_name = 'ADMIN', description = 'System administrator with full access' WHERE role_id = 4;
-
--- Delete unused roles from V1
-DELETE FROM role WHERE role_id IN (5, 6);
-
 -- Add example companies (matching V1 table structure)
 INSERT INTO company (company_id, company_name, address, status) VALUES
     (gen_random_uuid(), 'TechCorp Solutions', '123 Tech Street, Silicon Valley, CA', 'ACTIVE'),
@@ -15,9 +6,9 @@ INSERT INTO company (company_id, company_name, address, status) VALUES
 
 -- Add example events (matching V1 table structure)
 INSERT INTO event (event_id, company_id, title, description, location, picture, start_date, end_date, created_at, status) VALUES
-    (gen_random_uuid(), (SELECT company_id FROM company WHERE company_name = 'SpaceTech Ltd' LIMIT 1), 'Space Technology Conference 2024', 'Annual conference on space technology and innovation', 'Houston Convention Center, TX', 'https://example.com/space-conf.jpg', '2024-10-15', '2024-10-17', NOW(), 'ACTIVE'),
-    (gen_random_uuid(), (SELECT company_id FROM company WHERE company_name = 'TechCorp Solutions' LIMIT 1), 'Tech Innovation Summit', 'Summit showcasing latest technology innovations', 'San Francisco, CA', 'https://example.com/tech-summit.jpg', '2024-11-20', '2024-11-22', NOW(), 'PLANNING'),
-    (gen_random_uuid(), (SELECT company_id FROM company WHERE company_name = 'EventPro Inc' LIMIT 1), 'Event Management Workshop', 'Workshop on modern event management techniques', 'New York, NY', 'https://example.com/workshop.jpg', '2024-12-05', '2024-12-06', NOW(), 'ACTIVE');
+    (gen_random_uuid(), (SELECT company_id FROM company WHERE company_name = 'SpaceTech Ltd' LIMIT 1), 'Space Technology Conference 2024', 'Annual conference on space technology and innovation', 'Houston Convention Center, TX', 'https://example.com/space-conf.jpg', '2024-10-15', '2024-10-17', NOW(), 'PUBLISHED'),
+    (gen_random_uuid(), (SELECT company_id FROM company WHERE company_name = 'TechCorp Solutions' LIMIT 1), 'Tech Innovation Summit', 'Summit showcasing latest technology innovations', 'San Francisco, CA', 'https://example.com/tech-summit.jpg', '2024-11-20', '2024-11-22', NOW(), 'DRAFT'),
+    (gen_random_uuid(), (SELECT company_id FROM company WHERE company_name = 'EventPro Inc' LIMIT 1), 'Event Management Workshop', 'Workshop on modern event management techniques', 'New York, NY', 'https://example.com/workshop.jpg', '2024-12-05', '2024-12-06', NOW(), 'PUBLISHED');
 
 -- Add example users
 INSERT INTO "user" (user_id, role_id, team_id, company_id, full_name, email, password_hash, avatar, phone, address, created_at, status) VALUES
