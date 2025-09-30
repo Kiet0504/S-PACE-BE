@@ -54,6 +54,9 @@ public class User {
     @Column(length = 255)
     String address;
 
+    @Column(name = "gender", length = 20)
+    String gender;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     LocalDateTime createdAt;
 

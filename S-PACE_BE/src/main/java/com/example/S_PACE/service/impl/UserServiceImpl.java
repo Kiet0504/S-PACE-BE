@@ -2,6 +2,7 @@ package com.example.S_PACE.service.impl;
 
 import com.example.S_PACE.dto.request.LoginRequest;
 import com.example.S_PACE.dto.request.SignUpRequest;
+import com.example.S_PACE.dto.request.UserUpdateRequest;
 import com.example.S_PACE.dto.response.LoginResponse;
 import com.example.S_PACE.dto.response.UserResponse;
 import com.example.S_PACE.enums.ErrorStatus;
@@ -17,10 +18,15 @@ import com.example.S_PACE.service.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class UserServiceImpl implements UserService {
@@ -42,6 +48,10 @@ public class UserServiceImpl implements UserService {
     @Autowired
     private UserMapper userMapper;
 
+    // Default avatar URL - configured in application.yml
+    @Value("${app.default-avatar:/images/avatars/avatar.jpg}")
+    private String defaultAvatarUrl;
+
     @Override
     @Transactional
     public UserResponse register(SignUpRequest signUpRequest) {
@@ -50,6 +60,11 @@ public class UserServiceImpl implements UserService {
         // Validate input
         if (signUpRequest.getEmail() == null || signUpRequest.getEmail().trim().isEmpty()) {
             throw new IllegalArgumentException(ErrorStatus.NULL_VALUE.getDescription());
+        }
+        
+        // Validate password confirmation
+        if (!signUpRequest.getPassword().equals(signUpRequest.getConfirmPassword())) {
+            throw new IllegalArgumentException("Password and confirm password do not match");
         }
         
         // Check if user already exists
@@ -73,15 +88,23 @@ public class UserServiceImpl implements UserService {
 
             logger.info("Found role: {} for user registration", userRole.getRoleName());
 
-            // Create new user
+            // Create new user with only essential fields
             User user = new User();
             // userId will be generated automatically
             user.setFullName(signUpRequest.getFullName());
             user.setEmail(signUpRequest.getEmail());
             user.setPasswordHash(passwordEncoder.encode(signUpRequest.getPassword()));
-            user.setPhone(signUpRequest.getPhone());
-            user.setAddress(signUpRequest.getAddress());
             user.setRole(userRole);
+            
+            // Set default avatar for all new users
+            user.setAvatar(defaultAvatarUrl);
+            logger.info("Using default avatar for new user: {}", defaultAvatarUrl);
+            
+            // Set default values for optional fields (can be updated later in profile)
+            user.setPhone(null); // Will be updated in profile
+            user.setAddress(null); // Will be updated in profile
+            user.setGender(null); // Will be updated in profile
+            
             // createdAt will be set by @PrePersist
             user.setStatus(UserStatus.ACTIVE); // Set user as active after registration
 
@@ -145,5 +168,108 @@ public class UserServiceImpl implements UserService {
             logger.error("Unexpected error during login: {}", ex.getMessage(), ex);
             throw new RuntimeException(ErrorStatus.INVALID_CREDENTIALS.getDescription() + ": " + ex.getMessage());
         }
+    }
+
+    // ========== NEW METHODS FOR USER CONTROLLER ==========
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<UserResponse> getAllUsers() {
+        logger.info("Fetching all users");
+        return userRepository.findAll()
+                .stream()
+                .filter(user -> user.getStatus() != UserStatus.DELETED) // Exclude deleted users
+                .map(userMapper::toUserResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public UserResponse getUserById(UUID userId) {
+        logger.info("Fetching user by ID: {}", userId);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found with ID: " + userId));
+        
+        if (user.getStatus() == UserStatus.DELETED) {
+            throw new IllegalArgumentException("User has been deleted");
+        }
+        
+        return userMapper.toUserResponse(user);
+    }
+
+    @Override
+    @Transactional
+    public UserResponse updateUser(UUID userId, UserUpdateRequest updateRequest) {
+        logger.info("Updating user with ID: {}", userId);
+        
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found with ID: " + userId));
+        
+        if (user.getStatus() == UserStatus.DELETED) {
+            throw new IllegalArgumentException("Cannot update deleted user");
+        }
+        
+        // Check if email is being changed and if it already exists
+        if (!user.getEmail().equals(updateRequest.getEmail())) {
+            Optional<User> existingUser = userRepository.findByEmail(updateRequest.getEmail());
+            if (existingUser.isPresent() && !existingUser.get().getUserId().equals(userId)) {
+                throw new IllegalArgumentException("Email already exists");
+            }
+        }
+        
+        // Update user fields
+        user.setFullName(updateRequest.getFullName());
+        user.setEmail(updateRequest.getEmail());
+        user.setPhone(updateRequest.getPhone());
+        user.setAddress(updateRequest.getAddress());
+        user.setGender(updateRequest.getGender());
+        if (updateRequest.getAvatar() != null) {
+            user.setAvatar(updateRequest.getAvatar());
+        }
+        
+        User updatedUser = userRepository.save(user);
+        logger.info("User updated successfully with ID: {}", updatedUser.getUserId());
+        
+        return userMapper.toUserResponse(updatedUser);
+    }
+
+    @Override
+    @Transactional
+    public void deleteUser(UUID userId) {
+        logger.info("Soft deleting user with ID: {}", userId);
+        
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found with ID: " + userId));
+        
+        if (user.getStatus() == UserStatus.DELETED) {
+            throw new IllegalArgumentException("User is already deleted");
+        }
+        
+        // Soft delete by changing status to DELETED
+        user.setStatus(UserStatus.DELETED);
+        userRepository.save(user);
+        
+        logger.info("User soft deleted successfully with ID: {}", userId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<UserResponse> getUsersByStatus(UserStatus status) {
+        logger.info("Fetching users by status: {}", status);
+        return userRepository.findByStatus(status)
+                .stream()
+                .map(userMapper::toUserResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<UserResponse> getUsersByRole(String roleName) {
+        logger.info("Fetching users by role: {}", roleName);
+        return userRepository.findByRoleRoleName(roleName)
+                .stream()
+                .filter(user -> user.getStatus() != UserStatus.DELETED) // Exclude deleted users
+                .map(userMapper::toUserResponse)
+                .collect(Collectors.toList());
     }
 }
