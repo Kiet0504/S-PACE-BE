@@ -70,6 +70,7 @@ public class EventRegistrationServiceImpl implements EventRegistrationService {
                 .address(request.getAddress())
                 .reasonForParticipation(request.getReasonForParticipation())
                 .filePath(request.getFilePath())
+                .birthYear(request.getBirthYear())
                 .status(EventRegistrationStatus.PENDING)
                 .build();
 
@@ -197,6 +198,7 @@ public class EventRegistrationServiceImpl implements EventRegistrationService {
                 .address(registration.getAddress())
                 .reasonForParticipation(registration.getReasonForParticipation())
                 .filePath(registration.getFilePath())
+                .birthYear(registration.getBirthYear())
                 .build();
     }
 }

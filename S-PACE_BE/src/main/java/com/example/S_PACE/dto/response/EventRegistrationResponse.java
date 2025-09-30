@@ -36,4 +36,5 @@ public class EventRegistrationResponse {
     String address;
     String reasonForParticipation;
     String filePath;
+    Integer birthYear;
 } 

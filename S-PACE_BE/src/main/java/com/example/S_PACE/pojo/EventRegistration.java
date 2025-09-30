@@ -80,4 +80,7 @@ public class EventRegistration {
 
     @Column(name = "file_path")
     String filePath; // Gộp CV và Portfolio thành một file
+
+    @Column(name = "birth_year")
+    Integer birthYear;
 }

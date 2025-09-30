@@ -37,4 +37,6 @@ public class EventRegisterRequest {
     String reasonForParticipation;
 
     String filePath; // Optional - for CV/Portfolio
+
+    Integer birthYear; // Optional - birth year
 } 

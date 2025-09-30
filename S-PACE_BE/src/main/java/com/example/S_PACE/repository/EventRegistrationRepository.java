@@ -29,3 +29,4 @@ public interface EventRegistrationRepository extends JpaRepository<EventRegistra
     @Query("SELECT COUNT(er) FROM EventRegistration er WHERE er.event.eventId = :eventId AND er.status = 'APPROVED'")
     Long countApprovedRegistrationsByEventId(@Param("eventId") UUID eventId);
 }
+
