@@ -25,6 +25,7 @@ public class EventResponse {
     private EventStatus status;
     private String requirements;
     private String contactInfo;
+    private String picture;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

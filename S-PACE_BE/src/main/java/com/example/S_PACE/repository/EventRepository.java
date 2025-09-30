@@ -12,11 +12,17 @@ import java.util.UUID;
 
 @Repository
 public interface EventRepository extends JpaRepository<Event, UUID> {
-    
+
     List<Event> findByCompanyCompanyId(UUID companyId);
-    
+
     List<Event> findByStatus(EventStatus status);
-    
+
     @Query("SELECT e FROM Event e WHERE e.company.companyId = :companyId AND e.status = :status")
     List<Event> findByCompanyIdAndStatus(@Param("companyId") UUID companyId, @Param("status") EventStatus status);
+
+    @Query("SELECT e FROM Event e WHERE LOWER(e.title) LIKE LOWER(CONCAT('%', :eventName, '%'))")
+    List<Event> findByTitleContainingIgnoreCase(@Param("eventName") String eventName);
+
+    @Query("SELECT e FROM Event e WHERE e.company.companyId = :companyId AND LOWER(e.title) LIKE LOWER(CONCAT('%', :eventName, '%'))")
+    List<Event> findByCompanyIdAndTitleContainingIgnoreCase(@Param("companyId") UUID companyId, @Param("eventName") String eventName);
 } 

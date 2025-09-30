@@ -16,4 +16,5 @@ public class EventRequest {
     private EventStatus status;
     private String requirements;
     private String contactInfo;
+    private String picture;
 }

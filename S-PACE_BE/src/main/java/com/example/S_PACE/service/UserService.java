@@ -1,5 +1,6 @@
 package com.example.S_PACE.service;
 
+import com.example.S_PACE.dto.request.AdminCreateUserRequest;
 import com.example.S_PACE.dto.request.LoginRequest;
 import com.example.S_PACE.dto.request.SignUpRequest;
 import com.example.S_PACE.dto.request.UserUpdateRequest;
@@ -13,7 +14,10 @@ import java.util.UUID;
 public interface UserService {
     UserResponse register(SignUpRequest signUpRequest);
     LoginResponse login(LoginRequest loginRequest);
-    
+
+    // Admin method to create user accounts
+    UserResponse createUserByAdmin(AdminCreateUserRequest createRequest);
+
     // New methods for UserController
     List<UserResponse> getAllUsers();
     UserResponse getUserById(UUID userId);

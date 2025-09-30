@@ -1,5 +1,6 @@
 package com.example.S_PACE.service.impl;
 
+import com.example.S_PACE.dto.request.AdminCreateUserRequest;
 import com.example.S_PACE.dto.request.LoginRequest;
 import com.example.S_PACE.dto.request.SignUpRequest;
 import com.example.S_PACE.dto.request.UserUpdateRequest;
@@ -9,9 +10,12 @@ import com.example.S_PACE.enums.ErrorStatus;
 import com.example.S_PACE.enums.UserStatus;
 import com.example.S_PACE.exception.AuthenticationException;
 import com.example.S_PACE.mapper.UserMapper;
+import com.example.S_PACE.pojo.Company;
 import com.example.S_PACE.pojo.Role;
+import com.example.S_PACE.pojo.Team;
 import com.example.S_PACE.pojo.User;
 import com.example.S_PACE.repository.RoleRepository;
+import com.example.S_PACE.repository.TeamRepository;
 import com.example.S_PACE.repository.UserRepository;
 import com.example.S_PACE.utils.JwtTokenProvider;
 import com.example.S_PACE.service.UserService;
@@ -23,6 +27,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import jakarta.persistence.EntityManager;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -38,6 +43,12 @@ public class UserServiceImpl implements UserService {
 
     @Autowired
     private RoleRepository roleRepository;
+
+    @Autowired
+    private TeamRepository teamRepository;
+
+    @Autowired
+    private EntityManager entityManager;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -167,6 +178,90 @@ public class UserServiceImpl implements UserService {
         } catch (Exception ex) {
             logger.error("Unexpected error during login: {}", ex.getMessage(), ex);
             throw new RuntimeException(ErrorStatus.INVALID_CREDENTIALS.getDescription() + ": " + ex.getMessage());
+        }
+    }
+
+    @Override
+    @Transactional
+    public UserResponse createUserByAdmin(AdminCreateUserRequest createRequest) {
+        logger.info("Admin creating new user with email: {} and role: {}", createRequest.getEmail(), createRequest.getRoleName());
+
+        // Validate input
+        if (createRequest.getEmail() == null || createRequest.getEmail().trim().isEmpty()) {
+            throw new IllegalArgumentException(ErrorStatus.NULL_VALUE.getDescription());
+        }
+        if (createRequest.getRoleName() == null || createRequest.getRoleName().trim().isEmpty()) {
+            throw new IllegalArgumentException("Role name is required");
+        }
+
+        // Check if user already exists
+        Optional<User> existingUser = userRepository.findByEmail(createRequest.getEmail());
+        if (existingUser.isPresent()) {
+            logger.warn("User with email {} already exists", createRequest.getEmail());
+            throw new IllegalArgumentException(ErrorStatus.USER_ALREADY_EXISTS.getDescription());
+        }
+
+        try {
+            // Find role by name
+            Role userRole = roleRepository.findByRoleName(createRequest.getRoleName())
+                    .orElseThrow(() -> new IllegalArgumentException("Role not found: " + createRequest.getRoleName()));
+
+            logger.info("Found role: {} for admin user creation", userRole.getRoleName());
+
+            // Create new user
+            User user = new User();
+            user.setFullName(createRequest.getFullName());
+            user.setEmail(createRequest.getEmail());
+            user.setPasswordHash(passwordEncoder.encode(createRequest.getPassword()));
+            user.setRole(userRole);
+            user.setPhone(createRequest.getPhone());
+            user.setAddress(createRequest.getAddress());
+            user.setGender(createRequest.getGender());
+
+            // Set status or default to ACTIVE if null
+            if (createRequest.getStatus() != null) {
+                user.setStatus(createRequest.getStatus());
+            } else {
+                user.setStatus(UserStatus.ACTIVE);
+            }
+
+            // Set avatar or use default
+            if (createRequest.getAvatar() != null && !createRequest.getAvatar().trim().isEmpty()) {
+                user.setAvatar(createRequest.getAvatar());
+            } else {
+                user.setAvatar(defaultAvatarUrl);
+            }
+
+            // Set company if provided
+            if (createRequest.getCompanyId() != null) {
+                try {
+                    Company company = entityManager.getReference(Company.class, createRequest.getCompanyId());
+                    user.setCompany(company);
+                    logger.info("Assigned company ID: {} to user", createRequest.getCompanyId());
+                } catch (Exception ex) {
+                    logger.warn("Invalid company ID: {}", createRequest.getCompanyId());
+                    throw new IllegalArgumentException("Invalid company ID: " + createRequest.getCompanyId());
+                }
+            }
+
+            // Set team if provided
+            if (createRequest.getTeamId() != null) {
+                Team team = teamRepository.findById(createRequest.getTeamId())
+                        .orElseThrow(() -> new IllegalArgumentException("Team not found with ID: " + createRequest.getTeamId()));
+                user.setTeam(team);
+                logger.info("Assigned team ID: {} to user", createRequest.getTeamId());
+            }
+
+            // Save user
+            User savedUser = userRepository.save(user);
+            logger.info("User created successfully by admin with ID: {}", savedUser.getUserId());
+
+            // Convert to response DTO
+            return userMapper.toUserResponse(savedUser);
+
+        } catch (Exception ex) {
+            logger.error("Error during admin user creation: {}", ex.getMessage(), ex);
+            throw new RuntimeException("Failed to create user: " + ex.getMessage());
         }
     }
 

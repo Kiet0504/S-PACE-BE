@@ -1,5 +1,6 @@
 package com.example.S_PACE.controller;
 
+import com.example.S_PACE.dto.request.AdminCreateUserRequest;
 import com.example.S_PACE.dto.request.UserUpdateRequest;
 import com.example.S_PACE.dto.response.ResponseDTO;
 import com.example.S_PACE.dto.response.UserResponse;
@@ -42,6 +43,33 @@ public class UserController {
 
     @Autowired
     private JwtTokenProvider jwtTokenProvider;
+
+    @PostMapping("/admin/create")
+    @Operation(summary = "Create user by admin", description = "Admin endpoint to create user accounts with specified roles and assignments")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "201", description = "User created successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid request data or user already exists"),
+        @ApiResponse(responseCode = "403", description = "Access denied - Admin role required"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ResponseDTO<UserResponse>> createUserByAdmin(
+            @Valid @RequestBody AdminCreateUserRequest createRequest) {
+        try {
+            logger.info("Admin creating user with email: {} and role: {}", createRequest.getEmail(), createRequest.getRoleName());
+            UserResponse createdUser = userService.createUserByAdmin(createRequest);
+            return ResponseEntity.status(HttpStatus.CREATED)
+                .body(new ResponseDTO<>(true, "User created successfully", createdUser));
+        } catch (IllegalArgumentException ex) {
+            logger.warn("User creation validation error: {}", ex.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ResponseDTO<>(false, ex.getMessage(), null));
+        } catch (Exception ex) {
+            logger.error("Error creating user by admin: {}", ex.getMessage(), ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ResponseDTO<>(false, "Failed to create user", null));
+        }
+    }
 
     @GetMapping
     @Operation(summary = "Get all users", description = "Retrieve all active users (excludes deleted users)")
