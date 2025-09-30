@@ -24,3 +24,5 @@ hs_err_pid*
 replay_pid*
 *.idea*
 S-PACE_BE/.env.prod
+/S-PACE_BE/target
+.idea/workspace.xml
