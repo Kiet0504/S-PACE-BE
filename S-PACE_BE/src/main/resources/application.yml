@@ -82,7 +82,8 @@ spring:
             scope:
               - email
               - profile
-            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+              - openid
+            redirect-uri: "{baseUrl}/api/auth/google/callback"
         provider:
           google:
             authorization-uri: https://accounts.google.com/o/oauth2/auth

@@ -8,19 +8,14 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.Collections;
-import java.util.List;
 import java.util.Optional;
 
 @Component
@@ -28,117 +23,77 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private static final Logger logger = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
 
-    @Autowired
-    private JwtTokenProvider tokenProvider;
+    private final JwtTokenProvider jwtTokenProvider;
+    private final UserRepository userRepository;
 
-    @Autowired
-    private UserRepository userRepository;
-
-    private static final List<String> EXCLUDED_PATHS = List.of(
-            "/api/auth/login",
-            "/api/auth/signup",
-            "/api/auth/register",
-            "/api/health",
-            "/actuator",
-            "/swagger-ui",
-            "/swagger-ui.html",
-            "/swagger-resources",
-            "/v3/api-docs",
-            "/v3/api-docs.yaml",
-            "/webjars",
-            "/static",
-            "/public",
-            "/error",
-            "/favicon.ico",
-            "/h2-console",
-
-            "/api/auth/google",
-            "/login/oauth2",
-            "/oauth2"
-    );
+    public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider, UserRepository userRepository) {
+        this.jwtTokenProvider = jwtTokenProvider;
+        this.userRepository = userRepository;
+    }
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+    protected void doFilterInternal(HttpServletRequest request, 
+                                    HttpServletResponse response, 
+                                    FilterChain filterChain) 
             throws ServletException, IOException {
-
-        String requestURI = request.getRequestURI();
-        String method = request.getMethod();
-
-        logger.debug("Processing request: {} {}", method, requestURI);
-
+        
         try {
+            // 1. Lấy token từ header
             String jwt = getJwtFromRequest(request);
-
-            if (StringUtils.hasText(jwt)) {
-                logger.debug("JWT token found, validating...");
-
-                if (tokenProvider.validateToken(jwt)) {
-                    String userEmail = tokenProvider.getUserEmailFromJWT(jwt);
-                    logger.debug("JWT valid, user email: {}", userEmail);
-
-                    if (userEmail != null) {
-                        Optional<User> userOpt = userRepository.findByEmail(userEmail);
-
-                        if (userOpt.isPresent()) {
-                            User user = userOpt.get();
-                            logger.debug("User found: {}", user.getEmail());
-
-                            String roleName = user.getRole() != null ? user.getRole().getRoleName() : "USER";
-                            UserDetails userDetails = new org.springframework.security.core.userdetails.User(
-                                    user.getEmail(),
-                                    user.getPasswordHash(),
-                                    true, true, true, true,
-                                    Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + roleName.toUpperCase()))
+            
+            if (jwt != null && jwtTokenProvider.validateToken(jwt)) {
+                // 2. Parse token để lấy userId
+                String userId = jwtTokenProvider.getUserIdFromJWT(jwt);
+                
+                if (userId != null) {
+                    // 3. Load user details từ database
+                    Optional<User> userOptional = userRepository.findById(java.util.UUID.fromString(userId));
+                    
+                    if (userOptional.isPresent()) {
+                        User user = userOptional.get();
+                        
+                        // 4. Tạo authorities từ role
+                        String roleName = user.getRole() != null ? user.getRole().getRoleName() : "USER";
+                        SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + roleName);
+                        
+                        // 5. Tạo authentication object
+                        UsernamePasswordAuthenticationToken authentication = 
+                            new UsernamePasswordAuthenticationToken(
+                                user, 
+                                null, 
+                                Collections.singletonList(authority)
                             );
-
-                            UsernamePasswordAuthenticationToken authentication =
-                                    new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-                            authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-
-                            SecurityContextHolder.getContext().setAuthentication(authentication);
-                            logger.debug("User authenticated successfully: {}", userEmail);
-                        } else {
-                            logger.warn("User not found in database: {}", userEmail);
-                        }
+                        
+                        // 6. Set vào SecurityContext
+                        SecurityContextHolder.getContext().setAuthentication(authentication);
+                        
+                        logger.debug("JWT authentication successful for user: {}", user.getEmail());
+                    } else {
+                        logger.warn("User not found for JWT token with userId: {}", userId);
                     }
                 } else {
-                    logger.warn("JWT token validation failed");
+                    logger.warn("Could not extract userId from JWT token");
                 }
-            } else {
-                logger.debug("No JWT token found in request");
+            } else if (jwt != null) {
+                logger.warn("Invalid JWT token provided");
             }
         } catch (Exception ex) {
-            logger.error("Authentication error: {}", ex.getMessage(), ex);
+            logger.error("Could not set user authentication in security context", ex);
+            // Clear security context on error
             SecurityContextHolder.clearContext();
         }
-
+        
         filterChain.doFilter(request, response);
     }
 
-    @Override
-    protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
-        String path = request.getRequestURI();
-        String method = request.getMethod();
-
-        if ("OPTIONS".equals(method)) {
-            logger.debug("Allowing OPTIONS request: {}", path);
-            return true;
-        }
-
-        boolean shouldExclude = EXCLUDED_PATHS.stream().anyMatch(path::startsWith);
-        if (shouldExclude) {
-            logger.debug("Path excluded from JWT authentication: {}", path);
-        } else {
-            logger.debug("Path requires JWT authentication: {}", path);
-        }
-        return shouldExclude;
-    }
-
+    // Lấy JWT token từ Authorization header
     private String getJwtFromRequest(HttpServletRequest request) {
         String bearerToken = request.getHeader("Authorization");
-        if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
-            return bearerToken.substring(7);
+        
+        if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
+            return bearerToken.substring(7); // Bỏ "Bearer " prefix
         }
+        
         return null;
     }
-}
+} 

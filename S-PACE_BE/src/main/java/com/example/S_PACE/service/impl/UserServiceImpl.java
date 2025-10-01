@@ -26,6 +26,17 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import jakarta.persistence.EntityManager;
 import java.util.List;
@@ -62,6 +73,19 @@ public class UserServiceImpl implements UserService {
     // Default avatar URL - configured in application.yml
     @Value("${app.default-avatar:/images/avatars/avatar.jpg}")
     private String defaultAvatarUrl;
+
+    // Google OAuth configuration
+    @Value("${spring.security.oauth2.client.registration.google.client-id}")
+    private String googleClientId;
+
+    @Value("${spring.security.oauth2.client.registration.google.client-secret}")
+    private String googleClientSecret;
+
+    @Value("${server.port:8080}")
+    private String serverPort;
+
+    @Value("${server.servlet.context-path:}")
+    private String contextPath;
 
     @Override
     @Transactional
@@ -366,5 +390,215 @@ public class UserServiceImpl implements UserService {
                 .filter(user -> user.getStatus() != UserStatus.DELETED) // Exclude deleted users
                 .map(userMapper::toUserResponse)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public LoginResponse processGoogleOAuthCallback(String code, String state) {
+        logger.info("Processing Google OAuth callback with code: {}", code);
+
+        try {
+            // Step 1: Exchange authorization code for access token
+            String accessToken = exchangeCodeForAccessToken(code);
+
+            // Step 2: Get user info from Google using access token
+            GoogleUserInfo googleUserInfo = getUserInfoFromGoogle(accessToken);
+
+            // Step 3: Find or create user in database
+            User user = findOrCreateGoogleUser(googleUserInfo);
+
+            // Step 4: Generate JWT token
+            String jwtToken = jwtTokenProvider.generateToken(user);
+
+            // Step 5: Create login response
+            LoginResponse loginResponse = LoginResponse.builder()
+                .token(jwtToken)
+                .tokenType("Bearer")
+                .user(userMapper.toUserResponse(user))
+                .build();
+
+            logger.info("Google OAuth login successful for user: {}", user.getEmail());
+            return loginResponse;
+
+        } catch (Exception e) {
+            logger.error("Failed to process Google OAuth callback: {}", e.getMessage(), e);
+            throw new RuntimeException("Google OAuth authentication failed: " + e.getMessage(), e);
+        }
+    }
+
+    private String exchangeCodeForAccessToken(String code) throws Exception {
+        logger.info("Exchanging authorization code for access token");
+
+        try {
+            // Create HTTP client
+            RestTemplate restTemplate = new RestTemplate();
+
+            // Build the correct redirect URI
+            String baseUrl = "http://localhost:" + serverPort + contextPath;
+            String redirectUri = baseUrl + "/api/auth/google/callback";
+
+            // Prepare request parameters
+            MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+            params.add("client_id", googleClientId);
+            params.add("client_secret", googleClientSecret);
+            params.add("code", code);
+            params.add("grant_type", "authorization_code");
+            params.add("redirect_uri", redirectUri);
+
+            logger.info("Using redirect URI: {}", redirectUri);
+
+            // Set headers
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+
+            HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(params, headers);
+
+            // Make request to Google token endpoint
+            ResponseEntity<String> response = restTemplate.postForEntity(
+                    "https://oauth2.googleapis.com/token",
+                    request,
+                    String.class
+            );
+
+            logger.info("Google token response status: {}", response.getStatusCode());
+            logger.debug("Google token response body: {}", response.getBody());
+
+            if (response.getStatusCode() == HttpStatus.OK) {
+                // Parse response to get access token
+                ObjectMapper mapper = new ObjectMapper();
+                JsonNode jsonNode = mapper.readTree(response.getBody());
+                
+                if (jsonNode.has("access_token")) {
+                    String accessToken = jsonNode.get("access_token").asText();
+                    logger.info("Successfully exchanged code for access token");
+                    return accessToken;
+                } else {
+                    logger.error("No access_token in response: {}", response.getBody());
+                    throw new RuntimeException("No access_token in Google response");
+                }
+            } else {
+                logger.error("Failed to exchange code for token. Status: {}, Body: {}", 
+                    response.getStatusCode(), response.getBody());
+                throw new RuntimeException("Failed to exchange code for token: " + response.getStatusCode() + 
+                    ", Response: " + response.getBody());
+            }
+
+        } catch (Exception e) {
+            logger.error("Error exchanging code for access token: {}", e.getMessage(), e);
+            throw new Exception("Failed to exchange authorization code for access token: " + e.getMessage(), e);
+        }
+    }
+
+    private GoogleUserInfo getUserInfoFromGoogle(String accessToken) throws Exception {
+        logger.info("Getting user info from Google");
+
+        try {
+            // Create HTTP client
+            RestTemplate restTemplate = new RestTemplate();
+
+            // Set headers with access token
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(accessToken);
+
+            HttpEntity<String> request = new HttpEntity<>(headers);
+
+            // Make request to Google userinfo endpoint
+            ResponseEntity<String> response = restTemplate.exchange(
+                    "https://www.googleapis.com/oauth2/v2/userinfo",
+                    HttpMethod.GET,
+                    request,
+                    String.class
+            );
+
+            if (response.getStatusCode() == HttpStatus.OK) {
+                // Parse response to get user info
+                ObjectMapper mapper = new ObjectMapper();
+                JsonNode jsonNode = mapper.readTree(response.getBody());
+
+                GoogleUserInfo userInfo = new GoogleUserInfo();
+                userInfo.setId(jsonNode.get("id").asText());
+                userInfo.setEmail(jsonNode.get("email").asText());
+                userInfo.setName(jsonNode.get("name").asText());
+                userInfo.setPicture(jsonNode.get("picture").asText());
+                userInfo.setGivenName(jsonNode.has("given_name") ? jsonNode.get("given_name").asText() : null);
+                userInfo.setFamilyName(jsonNode.has("family_name") ? jsonNode.get("family_name").asText() : null);
+                userInfo.setLocale(jsonNode.has("locale") ? jsonNode.get("locale").asText() : null);
+                userInfo.setVerifiedEmail(jsonNode.has("verified_email") ? jsonNode.get("verified_email").asBoolean() : false);
+
+                logger.info("Successfully retrieved user info from Google: {}", userInfo.getEmail());
+                return userInfo;
+            } else {
+                throw new RuntimeException("Failed to get user info from Google: " + response.getStatusCode());
+            }
+
+        } catch (Exception e) {
+            logger.error("Error getting user info from Google: {}", e.getMessage(), e);
+            throw new Exception("Failed to get user info from Google", e);
+        }
+    }
+
+    private User findOrCreateGoogleUser(GoogleUserInfo googleUserInfo) {
+        logger.info("Finding or creating user for Google OAuth: {}", googleUserInfo.getEmail());
+
+        // First, try to find user by email
+        Optional<User> existingUser = userRepository.findByEmail(googleUserInfo.getEmail());
+
+        if (existingUser.isPresent()) {
+            User user = existingUser.get();
+            // Update user info if needed
+            if (user.getAvatar() == null && googleUserInfo.getPicture() != null) {
+                user.setAvatar(googleUserInfo.getPicture());
+                userRepository.save(user);
+            }
+            logger.info("Found existing user by email: {}", user.getEmail());
+            return user;
+        }
+
+        // Create new user
+        Role collaboratorRole = roleRepository.findByRoleName("COLLABORATOR")
+                .orElseThrow(() -> new RuntimeException("COLLABORATOR role not found"));
+
+        User newUser = new User();
+        newUser.setEmail(googleUserInfo.getEmail());
+        newUser.setFullName(googleUserInfo.getName());
+        newUser.setAvatar(googleUserInfo.getPicture());
+        newUser.setRole(collaboratorRole);
+        newUser.setStatus(UserStatus.ACTIVE);
+        // Set a random password for OAuth users (they won't use it)
+        newUser.setPasswordHash("OAUTH_USER");
+
+        User savedUser = userRepository.save(newUser);
+        logger.info("Created new user for Google OAuth: {}", savedUser.getEmail());
+        return savedUser;
+    }
+
+    // Helper class for Google user info
+    private static class GoogleUserInfo {
+        private String id;
+        private String email;
+        private String name;
+        private String picture;
+        private String givenName;
+        private String familyName;
+        private String locale;
+        private boolean verifiedEmail;
+
+        // Getters and setters
+        public String getId() { return id; }
+        public void setId(String id) { this.id = id; }
+        public String getEmail() { return email; }
+        public void setEmail(String email) { this.email = email; }
+        public String getName() { return name; }
+        public void setName(String name) { this.name = name; }
+        public String getPicture() { return picture; }
+        public void setPicture(String picture) { this.picture = picture; }
+        public String getGivenName() { return givenName; }
+        public void setGivenName(String givenName) { this.givenName = givenName; }
+        public String getFamilyName() { return familyName; }
+        public void setFamilyName(String familyName) { this.familyName = familyName; }
+        public String getLocale() { return locale; }
+        public void setLocale(String locale) { this.locale = locale; }
+        public boolean isVerifiedEmail() { return verifiedEmail; }
+        public void setVerifiedEmail(boolean verifiedEmail) { this.verifiedEmail = verifiedEmail; }
     }
 }

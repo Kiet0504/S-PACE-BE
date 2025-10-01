@@ -2,7 +2,6 @@ package com.example.S_PACE.config;
 
 import com.example.S_PACE.config.oauth2.OAuth2SuccessHandler;
 import com.example.S_PACE.utils.JwtAuthenticationFilter;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -23,11 +22,14 @@ import java.util.Arrays;
 @EnableWebSecurity
 public class SecurityConfig {
 
-    @Autowired
-    private JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final OAuth2SuccessHandler oAuth2SuccessHandler;
 
-    @Autowired
-    private OAuth2SuccessHandler oAuth2SuccessHandler;
+    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter, 
+                         OAuth2SuccessHandler oAuth2SuccessHandler) {
+        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.oAuth2SuccessHandler = oAuth2SuccessHandler;
+    }
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -57,8 +59,8 @@ public class SecurityConfig {
                 )
                 .oauth2Login(oauth2 -> oauth2
                         .successHandler(oAuth2SuccessHandler)
-                        
-                        .loginPage("/api/auth/google")
+                        .defaultSuccessUrl("/api/auth/google/callback", true)
+                        .failureUrl("/api/auth/google/error")
                 )
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))

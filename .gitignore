@@ -26,3 +26,5 @@ replay_pid*
 S-PACE_BE/.env.prod
 /S-PACE_BE/target
 .idea/workspace.xml
+S-PACE_BE/target/generated-sources/annotations/com/example/S_PACE/mapper/UserMapperImpl.java
+S-PACE_BE/target/generated-sources/annotations/com/example/S_PACE/mapper/RoleMapperImpl.java

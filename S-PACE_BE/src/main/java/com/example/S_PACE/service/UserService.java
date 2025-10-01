@@ -18,6 +18,9 @@ public interface UserService {
     // Admin method to create user accounts
     UserResponse createUserByAdmin(AdminCreateUserRequest createRequest);
 
+    // Google OAuth callback processing
+    LoginResponse processGoogleOAuthCallback(String code, String state);
+
     // New methods for UserController
     List<UserResponse> getAllUsers();
     UserResponse getUserById(UUID userId);
