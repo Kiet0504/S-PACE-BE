@@ -278,6 +278,65 @@ public class UserController {
         }
     }
 
+    @PostMapping("/my-profile/avatar")
+    @Operation(summary = "Upload current user's avatar", description = "Upload avatar image for the current authenticated user")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Avatar uploaded successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid file"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @PreAuthorize("hasAnyRole('ADMIN', 'COMPANY_ADMIN', 'EVENT_MANAGER', 'TEAM_LEADER', 'EMPLOYEE', 'COLLABORATOR')")
+    public ResponseEntity<ResponseDTO<String>> uploadMyAvatar(
+            @RequestParam("avatar") MultipartFile avatarFile,
+            HttpServletRequest request) {
+        try {
+            UUID userId = getUserIdFromToken(request);
+            logger.info("User {} uploading their avatar", userId);
+            
+            // Get user info
+            UserResponse user = userService.getUserById(userId);
+            
+            // Delete old avatar if exists
+            if (user.getAvatar() != null && !user.getAvatar().isEmpty()) {
+                try {
+                    fileUploadService.deleteAvatar(user.getAvatar());
+                } catch (Exception e) {
+                    logger.warn("Failed to delete old avatar: {}", e.getMessage());
+                }
+            }
+            
+            // Upload the new avatar
+            String avatarPath = fileUploadService.uploadAvatar(avatarFile, userId);
+            
+            // Update user's avatar in database
+            UserUpdateRequest updateRequest = new UserUpdateRequest();
+            updateRequest.setFullName(user.getFullName());
+            updateRequest.setEmail(user.getEmail());
+            updateRequest.setPhone(user.getPhone());
+            updateRequest.setAddress(user.getAddress());
+            updateRequest.setGender(user.getGender());
+            updateRequest.setAvatar(avatarPath);
+            
+            userService.updateUser(userId, updateRequest);
+            
+            logger.info("Avatar uploaded and updated successfully for user: {}", userId);
+            return ResponseEntity.ok(new ResponseDTO<>(true, "Avatar uploaded successfully", avatarPath));
+            
+        } catch (IllegalArgumentException ex) {
+            logger.warn("Avatar upload validation error: {}", ex.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ResponseDTO<>(false, ex.getMessage(), null));
+        } catch (IOException ex) {
+            logger.error("File upload error: {}", ex.getMessage(), ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ResponseDTO<>(false, "Failed to upload avatar", null));
+        } catch (Exception ex) {
+            logger.error("Error uploading avatar: {}", ex.getMessage(), ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ResponseDTO<>(false, "Failed to upload avatar", null));
+        }
+    }
+
     private UUID getUserIdFromToken(HttpServletRequest request) {
         String token = getJwtFromRequest(request);
         if (StringUtils.hasText(token)) {

@@ -1,0 +1,201 @@
+========================================
+AVATAR UPLOAD & STATIC FILE SERVING API
+========================================
+
+📌 OVERVIEW
+-----------
+Hệ thống hỗ trợ upload avatar cho người dùng và phục vụ các file tĩnh (static files) thông qua HTTP.
+
+📁 FILE STORAGE
+---------------
+- Avatar được lưu tại: ./uploads/avatars/
+- Static images tại: ./src/main/resources/static/images/
+- Format tên file: {userId}_{timestamp}.{extension}
+- Kích thước tối đa: 5MB
+- Định dạng cho phép: JPEG, JPG, PNG, GIF, WebP
+
+🔗 STATIC FILE ACCESS
+---------------------
+Sau khi upload, files có thể được truy cập công khai qua:
+- Avatar: http://localhost:8080/uploads/avatars/{filename}
+- Static images: http://localhost:8080/images/{path}
+
+📡 API ENDPOINTS
+================
+
+1️⃣ UPLOAD AVATAR FOR CURRENT USER (Recommended)
+------------------------------------------------
+POST /api/users/my-profile/avatar
+
+Description: User tự upload avatar của chính mình
+
+Headers:
+  Authorization: Bearer {jwt_token}
+  Content-Type: multipart/form-data
+
+Body (Form Data):
+  avatar: (file) - Image file
+
+Response Success (200):
+{
+  "success": true,
+  "message": "Avatar uploaded successfully",
+  "data": "/uploads/avatars/123e4567-e89b-12d3-a456-426614174000_1696176000000.jpg"
+}
+
+Response Error (400):
+{
+  "success": false,
+  "message": "Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed",
+  "data": null
+}
+
+cURL Example:
+curl -X POST "http://localhost:8080/api/users/my-profile/avatar" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -F "avatar=@/path/to/image.jpg"
+
+---
+
+2️⃣ UPLOAD AVATAR FOR SPECIFIC USER (Admin/Company Admin)
+---------------------------------------------------------
+POST /api/users/{userId}/avatar
+
+Description: Admin hoặc Company Admin upload avatar cho user cụ thể
+
+Headers:
+  Authorization: Bearer {jwt_token}
+  Content-Type: multipart/form-data
+
+Path Parameters:
+  userId: UUID của user cần upload avatar
+
+Body (Form Data):
+  avatar: (file) - Image file
+
+Authorization:
+  - ADMIN: Có thể upload cho bất kỳ user nào
+  - COMPANY_ADMIN: Có thể upload cho bất kỳ user nào
+  - User: Chỉ có thể upload cho chính mình (userId phải trùng với user đang đăng nhập)
+
+Response Success (200):
+{
+  "success": true,
+  "message": "Avatar uploaded successfully",
+  "data": "/uploads/avatars/123e4567-e89b-12d3-a456-426614174000_1696176000000.jpg"
+}
+
+cURL Example:
+curl -X POST "http://localhost:8080/api/users/123e4567-e89b-12d3-a456-426614174000/avatar" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -F "avatar=@/path/to/image.jpg"
+
+---
+
+🎯 USAGE GUIDE
+==============
+
+1. Frontend Implementation (React/Vue/Angular):
+------------------------------------------------
+```javascript
+const uploadAvatar = async (file) => {
+  const formData = new FormData();
+  formData.append('avatar', file);
+  
+  const response = await fetch('http://localhost:8080/api/users/my-profile/avatar', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${localStorage.getItem('token')}`
+    },
+    body: formData
+  });
+  
+  const result = await response.json();
+  if (result.success) {
+    console.log('Avatar URL:', result.data);
+    // Display image: <img src={`http://localhost:8080${result.data}`} />
+  }
+};
+```
+
+2. HTML Form Example:
+---------------------
+```html
+<form id="avatarForm">
+  <input type="file" id="avatarInput" accept="image/*" required />
+  <button type="submit">Upload Avatar</button>
+</form>
+
+<script>
+document.getElementById('avatarForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  
+  const file = document.getElementById('avatarInput').files[0];
+  const formData = new FormData();
+  formData.append('avatar', file);
+  
+  const response = await fetch('/api/users/my-profile/avatar', {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer ' + localStorage.getItem('token')
+    },
+    body: formData
+  });
+  
+  const result = await response.json();
+  alert(result.message);
+});
+</script>
+```
+
+3. Displaying Avatar:
+---------------------
+```html
+<!-- Sau khi lấy avatarUrl từ user profile -->
+<img src="http://localhost:8080/uploads/avatars/user_123_1696176000000.jpg" 
+     alt="User Avatar" 
+     class="avatar" />
+```
+
+⚠️ VALIDATION RULES
+====================
+1. File type: Chỉ chấp nhận image files (JPEG, PNG, GIF, WebP)
+2. File size: Tối đa 5MB
+3. File name: Được tự động generate để tránh trùng lặp
+4. Old avatar: Tự động xóa khi upload avatar mới (cho endpoint my-profile/avatar)
+
+🔒 SECURITY
+===========
+- Static files (uploads/**, images/**) được serve công khai (no authentication required)
+- Upload endpoints yêu cầu authentication (JWT token)
+- File validation để prevent malicious uploads
+- Path traversal protection
+- File size limits
+
+💡 TIPS
+=======
+1. Nên resize image ở frontend trước khi upload để giảm băng thông
+2. Sử dụng lazy loading cho images
+3. Implement image preview trước khi upload
+4. Cache avatar URLs để giảm requests
+5. Sử dụng CDN cho production để tăng tốc độ load
+
+📞 TROUBLESHOOTING
+==================
+
+Issue: "File is empty"
+Solution: Đảm bảo file đã được chọn và FormData được tạo đúng
+
+Issue: "Invalid file type"
+Solution: Kiểm tra file extension và MIME type (phải là image/*)
+
+Issue: "File size too large"
+Solution: Resize image hoặc compress trước khi upload (max 5MB)
+
+Issue: 403 Forbidden
+Solution: Kiểm tra JWT token và permissions
+
+Issue: 404 Not Found when accessing image
+Solution: Kiểm tra đường dẫn file và đảm bảo file đã được upload thành công
+
+======================================== 

@@ -46,6 +46,8 @@ public class SecurityConfig {
                                 "/swagger-resources/**",
                                 "/webjars/**",
                                 "/static/**",
+                                "/images/**",
+                                "/uploads/**",
                                 "/google-login-test.html",
                                 "/api/health/**",
                                 "/h2-console/**",
