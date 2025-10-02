@@ -90,38 +90,53 @@ public class AuthController {
     }
 
     @GetMapping("/google/callback")
+    @Operation(summary = "Handle Google OAuth callback", description = "Handles the OAuth2 callback from Google")
     public void googleCallback(
-            @RequestParam String code,
+            @RequestParam(required = false) String code,
             @RequestParam(required = false) String state,
+            @RequestParam(required = false) String error,
             HttpServletResponse response) throws IOException {
 
         try {
-            logger.info("Google OAuth callback received with code: {}", code);
+            // Xử lý lỗi từ Google
+            if (error != null) {
+                logger.error("Google OAuth error received: {}", error);
+                String redirectUrl = "http://localhost:5173/auth/callback?error=" +
+                        URLEncoder.encode(error, StandardCharsets.UTF_8.toString());
+                response.sendRedirect(redirectUrl);
+                return;
+            }
 
-            // Use the service method instead of local method
-            LoginResponse loginResponse = userService.processGoogleOAuthCallback(code, state);
+            // Xử lý authorization code
+            if (code != null) {
+                logger.info("Google OAuth callback received with code");
 
-            logger.info("Login response created successfully");
-            logger.info("Token: {}", loginResponse.getToken());
-            logger.info("User: {}", loginResponse.getUser().getEmail());
+                // 1-4. Exchange code, get user info, create/update user, generate JWT
+                LoginResponse loginResponse = userService.processGoogleOAuthCallback(code, state);
 
-            // Redirect về frontend với token - THÊM &success=true
-            String frontendUrl = "http://localhost:5173/auth/callback?token=" +
-                    URLEncoder.encode(loginResponse.getToken(), StandardCharsets.UTF_8.toString()) +
-                    "&user=" + URLEncoder.encode(objectMapper.writeValueAsString(loginResponse.getUser()), StandardCharsets.UTF_8.toString()) +
-                    "&success=true";  // THÊM DÒNG NÀY
+                logger.info("Login response created successfully");
+                logger.info("Token generated for user: {}", loginResponse.getUser().getEmail());
 
-            logger.info("Redirecting to frontend: {}", frontendUrl);
-            response.sendRedirect(frontendUrl);
+                // 5. Redirect về frontend với token
+                String redirectUrl = "http://localhost:5173/auth/callback?token=" +
+                        URLEncoder.encode(loginResponse.getToken(), StandardCharsets.UTF_8.toString());
+                
+                logger.info("Redirecting to frontend: {}", redirectUrl);
+                response.sendRedirect(redirectUrl);
+                return;
+            }
+
+            // Nếu không có code hoặc error
+            logger.warn("Google OAuth callback received without code or error");
+            String redirectUrl = "http://localhost:5173/auth/callback?error=" +
+                    URLEncoder.encode("No authorization code received", StandardCharsets.UTF_8.toString());
+            response.sendRedirect(redirectUrl);
 
         } catch (Exception e) {
-            logger.error("Google OAuth callback failed: {}", e.getMessage(), e);
-
-            // Redirect về frontend với error
-            String errorUrl = "http://localhost:5173/auth/callback?error=" +
-                    URLEncoder.encode("Authentication failed: " + e.getMessage(), StandardCharsets.UTF_8.toString()) +
-                    "&success=false";  // THÊM DÒNG NÀY
-            response.sendRedirect(errorUrl);
+            logger.error("Google OAuth callback error", e);
+            String redirectUrl = "http://localhost:5173/auth/callback?error=" +
+                    URLEncoder.encode("Authentication failed: " + e.getMessage(), StandardCharsets.UTF_8.toString());
+            response.sendRedirect(redirectUrl);
         }
     }
 }
