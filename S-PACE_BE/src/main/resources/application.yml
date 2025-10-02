@@ -97,6 +97,7 @@ jwt:
   refresh-token-expiration: ${JWT_REFRESH_EXPIRATION:604800000}
 
 file:
+  upload-dir: ${FILE_UPLOAD_DIR:./uploads}
   upload:
     cv-dir: ${FILE_UPLOAD_CV_DIR:./uploads/cvs}
     certificate-dir: ${FILE_UPLOAD_CERT_DIR:./uploads/certificates}
