@@ -41,6 +41,7 @@ public class SecurityConfig {
                                 "/api/files/**",
                                 "/api/teams",
                                 "/api/event-tasks/**",
+                                "/api/attendance-logs/**",
                                 "/login/oauth2/**",
                                 "/oauth2/**",
                                 "/swagger-ui/**",
