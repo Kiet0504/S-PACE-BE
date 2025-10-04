@@ -33,7 +33,7 @@ public class User {
     @JoinColumn(name = "team_id", referencedColumnName = "team_id")
     Team team;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "company_id", referencedColumnName = "company_id")
     Company company;
 
