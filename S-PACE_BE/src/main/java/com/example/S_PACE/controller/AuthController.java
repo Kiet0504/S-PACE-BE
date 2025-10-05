@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -86,6 +87,30 @@ public class AuthController {
             logger.error("Login failed: {}", ex.getMessage(), ex);
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(new ResponseDTO<>(false, "Login failed: " + ex.getMessage(), null));
+        }
+    }
+
+    @PostMapping("/logout")
+    @Operation(summary = "User logout", description = "Logout user and invalidate token")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Logout successful"),
+            @ApiResponse(responseCode = "500", description = "Logout failed")
+    })
+    public ResponseEntity<ResponseDTO<Void>> logout(HttpServletRequest request) {
+        try {
+            logger.info("Logout request received");
+            
+            // Clear any session data if needed
+            // Note: Since we're using JWT (stateless), we don't need to clear server-side sessions
+            // The client should remove the token from their storage
+            
+            logger.info("User logged out successfully");
+            return ResponseEntity.ok(new ResponseDTO<>(true, "Logout successful", null));
+            
+        } catch (Exception ex) {
+            logger.error("Logout failed: {}", ex.getMessage(), ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ResponseDTO<>(false, "Logout failed: " + ex.getMessage(), null));
         }
     }
 

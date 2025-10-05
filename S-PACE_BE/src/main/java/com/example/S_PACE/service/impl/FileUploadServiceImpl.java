@@ -95,6 +95,39 @@ public class FileUploadServiceImpl implements FileUploadService {
         return contentType != null && ALLOWED_IMAGE_TYPES.contains(contentType.toLowerCase());
     }
 
+    @Override
+    public String uploadCV(MultipartFile file, UUID userId) throws IOException {
+        // This method is not implemented in local storage
+        throw new UnsupportedOperationException("CV upload not supported in local storage. Use cloud storage instead.");
+    }
+
+    @Override
+    public String uploadCertificate(MultipartFile file, UUID userId) throws IOException {
+        // This method is not implemented in local storage
+        throw new UnsupportedOperationException("Certificate upload not supported in local storage. Use cloud storage instead.");
+    }
+
+    @Override
+    public void deleteFile(String fileUrl) throws IOException {
+        deleteAvatar(fileUrl);
+    }
+
+    @Override
+    public boolean isValidDocumentFile(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            return false;
+        }
+
+        String contentType = file.getContentType();
+        List<String> allowedDocumentTypes = Arrays.asList(
+            "application/pdf", 
+            "application/msword", 
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        );
+        
+        return contentType != null && allowedDocumentTypes.contains(contentType.toLowerCase());
+    }
+
     private String getFileExtension(String filename) {
         if (filename == null || filename.lastIndexOf('.') == -1) {
             return ".jpg"; // Default extension
