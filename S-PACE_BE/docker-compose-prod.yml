@@ -6,7 +6,7 @@ services:
     container_name: s-space-app-prod
     environment:
       SPRING_PROFILES_ACTIVE: prod
-      DB_HOST: postgres
+      DB_HOST: ${DB_HOST}
       DB_PORT: 5432
       DB_NAME: space_db_prod
       DB_USERNAME: ${DB_USERNAME:-postgres}
