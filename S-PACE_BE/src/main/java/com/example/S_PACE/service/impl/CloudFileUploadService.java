@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -17,6 +18,7 @@ import java.util.UUID;
 
 @Service
 @Primary
+@ConditionalOnProperty(name = "app.storage.type", havingValue = "cloud")
 public class CloudFileUploadService implements FileUploadService {
 
     private static final Logger logger = LoggerFactory.getLogger(CloudFileUploadService.class);
