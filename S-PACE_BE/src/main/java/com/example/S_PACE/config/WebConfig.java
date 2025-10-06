@@ -21,7 +21,9 @@ public class WebConfig implements WebMvcConfigurer {
                         "https://s-pace.com.vn",
                         "https://www.s-pace.com.vn",
                         "http://s-pace.com.vn",
-                        "http://www.s-pace.com.vn"
+                        "http://www.s-pace.com.vn",
+                        "https://api.s-pace.com.vn",
+                        "http://api.s-pace.com.vn"
                 )
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
                 .allowedHeaders("*")
@@ -32,7 +34,9 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addMapping("/**")
                 .allowedOrigins(
                         "https://s-pace.com.vn",
-                        "https://www.s-pace.com.vn"
+                        "https://www.s-pace.com.vn",
+                        "https://api.s-pace.com.vn",
+                        "http://api.s-pace.com.vn"
                 )
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
                 .allowedHeaders("*")
