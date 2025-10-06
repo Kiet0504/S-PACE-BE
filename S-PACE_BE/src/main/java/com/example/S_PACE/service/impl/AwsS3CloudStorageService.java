@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
@@ -73,7 +74,10 @@ public class AwsS3CloudStorageService implements CloudStorageService {
     public String uploadCertificate(MultipartFile file, UUID userId) throws IOException {
         logger.info("Uploading certificate to S3 for user: {}", userId);
 
-        validateFile(file, ALLOWED_DOCUMENT_TYPES, "certificate");
+        // Allow both image and document types for certificates
+        List<String> allowedTypes = new ArrayList<>(ALLOWED_IMAGE_TYPES);
+        allowedTypes.addAll(ALLOWED_DOCUMENT_TYPES);
+        validateFile(file, allowedTypes, "certificate");
 
         String key = generateFileKey("certificates", userId, file.getOriginalFilename());
         

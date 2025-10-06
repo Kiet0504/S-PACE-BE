@@ -337,6 +337,7 @@ public class UserController {
         }
     }
 
+
     private UUID getUserIdFromToken(HttpServletRequest request) {
         String token = getJwtFromRequest(request);
         if (StringUtils.hasText(token)) {

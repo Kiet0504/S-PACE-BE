@@ -28,6 +28,17 @@ public class WebConfig implements WebMvcConfigurer {
                 .allowCredentials(true)
                 .maxAge(3600);
 
+        // Additional CORS mapping for all endpoints
+        registry.addMapping("/**")
+                .allowedOrigins(
+                        "https://s-pace.com.vn",
+                        "https://www.s-pace.com.vn"
+                )
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
+                .allowedHeaders("*")
+                .allowCredentials(true)
+                .maxAge(3600);
+
         // CORS for static files
         registry.addMapping("/uploads/**")
                 .allowedOrigins("*") // Allow all origins for static files

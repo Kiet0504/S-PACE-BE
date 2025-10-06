@@ -63,8 +63,9 @@ public class CloudFileUploadService implements FileUploadService {
     public String uploadCertificate(MultipartFile file, UUID userId) throws IOException {
         logger.info("Uploading certificate for user: {} using {} storage", userId, storageType);
         
-        if (!isValidDocumentFile(file)) {
-            throw new IllegalArgumentException("Invalid document file type. Only PDF and Word documents are allowed");
+        // Allow both image and document files for certificates
+        if (!isValidImageFile(file) && !isValidDocumentFile(file)) {
+            throw new IllegalArgumentException("Invalid certificate file type. Only images (JPEG, PNG, GIF, WebP) and documents (PDF, Word) are allowed");
         }
 
         return cloudStorageService.uploadCertificate(file, userId);

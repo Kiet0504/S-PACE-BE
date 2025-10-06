@@ -56,6 +56,27 @@ check_git_status() {
     fi
 }
 
+# Function to check SSL certificate
+check_ssl_certificate() {
+    print_status "Checking SSL certificate..."
+    
+    if [ ! -f "ssl/fullchain.pem" ] || [ ! -f "ssl/privkey.pem" ]; then
+        print_warning "SSL certificate files not found!"
+        print_warning "Please ensure you have:"
+        print_warning "  - ssl/fullchain.pem"
+        print_warning "  - ssl/privkey.pem"
+        print_warning "You can obtain SSL certificates using Let's Encrypt or your certificate provider."
+        read -p "Do you want to continue without SSL? (y/N): " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            print_error "Deployment cancelled - SSL certificate required"
+            exit 1
+        fi
+    else
+        print_success "SSL certificate files found"
+    fi
+}
+
 # Function to wait for service health
 wait_for_health() {
     local max_attempts=30
@@ -86,9 +107,10 @@ show_deployment_info() {
     echo "================================================"
     echo ""
     echo " Application URLs:"
-    echo "   - HTTP: http://REDACTED_IP:8080"
-    echo "   - Health: http://REDACTED_IP:8080/actuator/health"
-    echo "   - API Docs: http://REDACTED_IP:8080/swagger-ui.html"
+    echo "   - Frontend: https://s-pace.com.vn"
+    echo "   - Backend API: https://s-pace.com.vn/api"
+    echo "   - Health: https://s-pace.com.vn/actuator/health"
+    echo "   - API Docs: https://s-pace.com.vn/swagger-ui.html"
     echo ""
     echo " Container Status:"
     docker-compose -f docker-compose-prod.yml ps
@@ -97,6 +119,10 @@ show_deployment_info() {
     echo "   - View logs: docker-compose -f docker-compose-prod.yml logs -f app"
     echo "   - Stop services: docker-compose -f docker-compose-prod.yml down"
     echo "   - Restart app: docker-compose -f docker-compose-prod.yml restart app"
+    echo ""
+    echo " Frontend-Backend Connection Test:"
+    echo "   - Test CORS: curl -H \"Origin: https://s-pace.com.vn\" -X OPTIONS https://s-pace.com.vn/api/users"
+    echo "   - Test API: curl https://s-pace.com.vn/api/users"
     echo ""
 }
 
@@ -168,14 +194,21 @@ main() {
         print_status "Setting permissions..."
         chmod 755 uploads uploads/cvs uploads/certificates uploads/avatars logs
         
+        # Check SSL certificate
+        check_ssl_certificate
+        
         # Copy environment file
         print_status "Setting up environment..."
         if [ ! -f .env ]; then
             if [ -f .env.prod ]; then
                 cp .env.prod .env
                 print_warning "Please edit .env file with your production values!"
+            elif [ -f env.prod.template ]; then
+                cp env.prod.template .env
+                print_warning "Please edit .env file with your production values!"
+                print_warning "Template copied from env.prod.template"
             else
-                print_warning ".env.prod file not found! Please create .env file manually."
+                print_warning "No environment template found! Please create .env file manually."
             fi
         fi
     fi

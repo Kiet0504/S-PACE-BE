@@ -1,10 +1,14 @@
 package com.example.S_PACE.controller;
 
+import com.example.S_PACE.dto.request.CertificateRequest;
 import com.example.S_PACE.dto.request.EventRequest;
 import com.example.S_PACE.dto.response.EventResponse;
 import com.example.S_PACE.dto.response.ResponseDTO;
 import com.example.S_PACE.enums.EventStatus;
+import com.example.S_PACE.pojo.Certificates;
+import com.example.S_PACE.service.CertificateService;
 import com.example.S_PACE.service.EventService;
+import com.example.S_PACE.service.FileUploadService;
 import com.example.S_PACE.utils.JwtTokenProvider;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -20,7 +24,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 
@@ -33,6 +39,12 @@ public class EventController {
 
     @Autowired
     private EventService eventService;
+
+    @Autowired
+    private FileUploadService fileUploadService;
+
+    @Autowired
+    private CertificateService certificateService;
 
     @Autowired
     private JwtTokenProvider jwtTokenProvider;
@@ -264,6 +276,159 @@ public class EventController {
             logger.error("Error checking event existence {}: {}", eventId, ex.getMessage(), ex);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(new ResponseDTO<>(false, "Failed to check event existence", false));
+        }
+    }
+
+    @PostMapping("/{eventId}/certificates/{userId}")
+    @Operation(summary = "Upload certificate for event participant", description = "Upload certificate for a specific user in an event")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Certificate uploaded successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid file or user/event not found"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @PreAuthorize("hasAnyRole('ADMIN', 'COMPANY_ADMIN', 'EVENT_MANAGER') or #userId == authentication.principal.userId")
+    public ResponseEntity<ResponseDTO<Certificates>> uploadEventCertificate(
+            @PathVariable UUID eventId,
+            @PathVariable UUID userId,
+            @RequestParam("certificate") MultipartFile certificateFile,
+            @RequestParam("certificateCode") String certificateCode,
+            @RequestParam("issuedDate") String issuedDate,
+            @RequestParam(value = "issuedBy", required = false) String issuedBy,
+            HttpServletRequest request) {
+        try {
+            logger.info("Uploading certificate for user: {} in event: {}", userId, eventId);
+            
+            // Verify event exists
+            eventService.getEventById(eventId);
+            
+            // Upload the certificate file
+            String certificatePath = fileUploadService.uploadCertificate(certificateFile, userId);
+            
+            // Create certificate request
+            CertificateRequest certificateRequest = new CertificateRequest();
+            certificateRequest.setEventId(eventId);
+            certificateRequest.setUserId(userId);
+            certificateRequest.setCertificateCode(certificateCode);
+            certificateRequest.setIssuedDate(java.time.LocalDate.parse(issuedDate));
+            certificateRequest.setIssuedBy(issuedBy);
+            
+            // Save certificate to database
+            Certificates savedCertificate = certificateService.createCertificate(certificateRequest, certificatePath);
+            
+            logger.info("Certificate uploaded and saved successfully for user: {} in event: {}", userId, eventId);
+            return ResponseEntity.ok(new ResponseDTO<>(true, "Certificate uploaded successfully", savedCertificate));
+            
+        } catch (IllegalArgumentException ex) {
+            logger.warn("Certificate upload validation error: {}", ex.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ResponseDTO<>(false, ex.getMessage(), null));
+        } catch (IOException ex) {
+            logger.error("File upload error: {}", ex.getMessage(), ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ResponseDTO<>(false, "Failed to upload certificate", null));
+        } catch (Exception ex) {
+            logger.error("Error uploading certificate: {}", ex.getMessage(), ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ResponseDTO<>(false, "Failed to upload certificate", null));
+        }
+    }
+
+    @PostMapping("/{eventId}/certificates/my-profile")
+    @Operation(summary = "Upload my certificate for event", description = "Upload certificate for the current user in a specific event")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Certificate uploaded successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid file or event not found"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @PreAuthorize("hasAnyRole('ADMIN', 'COMPANY_ADMIN', 'EVENT_MANAGER', 'TEAM_LEADER', 'EMPLOYEE', 'COLLABORATOR')")
+    public ResponseEntity<ResponseDTO<Certificates>> uploadMyEventCertificate(
+            @PathVariable UUID eventId,
+            @RequestParam("certificate") MultipartFile certificateFile,
+            @RequestParam("certificateCode") String certificateCode,
+            @RequestParam("issuedDate") String issuedDate,
+            @RequestParam(value = "issuedBy", required = false) String issuedBy,
+            HttpServletRequest request) {
+        try {
+            UUID userId = getUserIdFromToken(request);
+            logger.info("User {} uploading certificate for event: {}", userId, eventId);
+            
+            // Verify event exists
+            eventService.getEventById(eventId);
+            
+            // Upload the certificate file
+            String certificatePath = fileUploadService.uploadCertificate(certificateFile, userId);
+            
+            // Create certificate request
+            CertificateRequest certificateRequest = new CertificateRequest();
+            certificateRequest.setEventId(eventId);
+            certificateRequest.setUserId(userId);
+            certificateRequest.setCertificateCode(certificateCode);
+            certificateRequest.setIssuedDate(java.time.LocalDate.parse(issuedDate));
+            certificateRequest.setIssuedBy(issuedBy);
+            
+            // Save certificate to database
+            Certificates savedCertificate = certificateService.createCertificate(certificateRequest, certificatePath);
+            
+            logger.info("Certificate uploaded and saved successfully for user: {} in event: {}", userId, eventId);
+            return ResponseEntity.ok(new ResponseDTO<>(true, "Certificate uploaded successfully", savedCertificate));
+            
+        } catch (IllegalArgumentException ex) {
+            logger.warn("Certificate upload validation error: {}", ex.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ResponseDTO<>(false, ex.getMessage(), null));
+        } catch (IOException ex) {
+            logger.error("File upload error: {}", ex.getMessage(), ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ResponseDTO<>(false, "Failed to upload certificate", null));
+        } catch (Exception ex) {
+            logger.error("Error uploading certificate: {}", ex.getMessage(), ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ResponseDTO<>(false, "Failed to upload certificate", null));
+        }
+    }
+
+    @GetMapping("/{eventId}/certificates")
+    @Operation(summary = "Get certificates for event", description = "Get all certificates for a specific event")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Certificates retrieved successfully"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @PreAuthorize("hasAnyRole('ADMIN', 'COMPANY_ADMIN', 'EVENT_MANAGER')")
+    public ResponseEntity<ResponseDTO<List<Certificates>>> getEventCertificates(@PathVariable UUID eventId) {
+        try {
+            logger.info("Fetching certificates for event: {}", eventId);
+            List<Certificates> certificates = certificateService.getCertificatesByEvent(eventId);
+            return ResponseEntity.ok(new ResponseDTO<>(true, "Certificates retrieved successfully", certificates));
+        } catch (Exception ex) {
+            logger.error("Error fetching certificates for event {}: {}", eventId, ex.getMessage(), ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ResponseDTO<>(false, "Failed to fetch certificates", null));
+        }
+    }
+
+    @GetMapping("/{eventId}/certificates/{userId}")
+    @Operation(summary = "Get user certificate for event", description = "Get certificate for a specific user in an event")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Certificate retrieved successfully"),
+        @ApiResponse(responseCode = "404", description = "Certificate not found"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @PreAuthorize("hasAnyRole('ADMIN', 'COMPANY_ADMIN', 'EVENT_MANAGER') or #userId == authentication.principal.userId")
+    public ResponseEntity<ResponseDTO<Certificates>> getUserEventCertificate(
+            @PathVariable UUID eventId,
+            @PathVariable UUID userId) {
+        try {
+            logger.info("Fetching certificate for user: {} in event: {}", userId, eventId);
+            Certificates certificate = certificateService.getCertificateByEventAndUser(eventId, userId);
+            return ResponseEntity.ok(new ResponseDTO<>(true, "Certificate retrieved successfully", certificate));
+        } catch (IllegalArgumentException ex) {
+            logger.warn("Certificate not found: {}", ex.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ResponseDTO<>(false, ex.getMessage(), null));
+        } catch (Exception ex) {
+            logger.error("Error fetching certificate for user {} in event {}: {}", userId, eventId, ex.getMessage(), ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ResponseDTO<>(false, "Failed to fetch certificate", null));
         }
     }
 
