@@ -17,7 +17,6 @@ import java.util.List;
 import java.util.UUID;
 
 @Service
-@Primary
 @ConditionalOnProperty(name = "app.storage.type", havingValue = "cloud")
 public class CloudFileUploadService implements FileUploadService {
 
