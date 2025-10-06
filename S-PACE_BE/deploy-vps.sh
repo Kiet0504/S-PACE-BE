@@ -66,6 +66,10 @@ check_ssl_certificate() {
         print_warning "  - ssl/fullchain.pem"
         print_warning "  - ssl/privkey.pem"
         print_warning "You can obtain SSL certificates using Let's Encrypt or your certificate provider."
+        print_warning "For api.s-pace.com.vn subdomain, make sure your certificate includes:"
+        print_warning "  - s-pace.com.vn"
+        print_warning "  - www.s-pace.com.vn" 
+        print_warning "  - api.s-pace.com.vn"
         read -p "Do you want to continue without SSL? (y/N): " -n 1 -r
         echo
         if [[ ! $REPLY =~ ^[Yy]$ ]]; then
@@ -74,6 +78,14 @@ check_ssl_certificate() {
         fi
     else
         print_success "SSL certificate files found"
+        
+        # Check if certificate includes api.s-pace.com.vn
+        if openssl x509 -in ssl/fullchain.pem -text -noout | grep -q "api.s-pace.com.vn"; then
+            print_success "Certificate includes api.s-pace.com.vn subdomain"
+        else
+            print_warning "Certificate may not include api.s-pace.com.vn subdomain"
+            print_warning "Please verify your certificate includes all required domains"
+        fi
     fi
 }
 
@@ -108,9 +120,9 @@ show_deployment_info() {
     echo ""
     echo " Application URLs:"
     echo "   - Frontend: https://s-pace.com.vn"
-    echo "   - Backend API: https://s-pace.com.vn/api"
-    echo "   - Health: https://s-pace.com.vn/actuator/health"
-    echo "   - API Docs: https://s-pace.com.vn/swagger-ui.html"
+    echo "   - Backend API: https://api.s-pace.com.vn/api"
+    echo "   - Health: https://api.s-pace.com.vn/actuator/health"
+    echo "   - API Docs: https://api.s-pace.com.vn/swagger-ui/index.html"
     echo ""
     echo " Container Status:"
     docker-compose -f docker-compose-prod.yml ps
@@ -121,8 +133,10 @@ show_deployment_info() {
     echo "   - Restart app: docker-compose -f docker-compose-prod.yml restart app"
     echo ""
     echo " Frontend-Backend Connection Test:"
-    echo "   - Test CORS: curl -H \"Origin: https://s-pace.com.vn\" -X OPTIONS https://s-pace.com.vn/api/users"
-    echo "   - Test API: curl https://s-pace.com.vn/api/users"
+    echo "   - Test CORS: curl -H \"Origin: https://s-pace.com.vn\" -X OPTIONS https://api.s-pace.com.vn/api/users"
+    echo "   - Test API: curl https://api.s-pace.com.vn/api/users"
+    echo "   - Test Health: curl https://api.s-pace.com.vn/actuator/health"
+    echo "   - Test Swagger: curl https://api.s-pace.com.vn/swagger-ui/index.html"
     echo ""
 }
 
@@ -221,6 +235,23 @@ main() {
     
     # Wait for services to be ready
     if wait_for_health; then
+        # Test API endpoints after deployment
+        print_status "Testing API endpoints..."
+        
+        # Test health endpoint
+        if curl -f https://api.s-pace.com.vn/actuator/health >/dev/null 2>&1; then
+            print_success "Health endpoint is working!"
+        else
+            print_warning "Health endpoint test failed - check nginx configuration"
+        fi
+        
+        # Test Swagger UI
+        if curl -f https://api.s-pace.com.vn/swagger-ui/index.html >/dev/null 2>&1; then
+            print_success "Swagger UI is accessible!"
+        else
+            print_warning "Swagger UI test failed - check OpenAPI configuration"
+        fi
+        
         show_deployment_info
     else
         print_error "Deployment failed!"
@@ -247,10 +278,19 @@ trap cleanup SIGINT SIGTERM
 if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
     echo "S-PACE VPS Deployment Script"
     echo ""
+    echo "This script deploys S-PACE backend with API subdomain support:"
+    echo "  - Frontend: https://s-pace.com.vn"
+    echo "  - Backend API: https://api.s-pace.com.vn"
+    echo ""
     echo "Usage:"
     echo "  ./deploy-vps.sh          # First time deployment"
     echo "  ./deploy-vps.sh update   # Update existing deployment"
     echo "  ./deploy-vps.sh --help   # Show this help"
+    echo ""
+    echo "Prerequisites:"
+    echo "  - SSL certificate for s-pace.com.vn, www.s-pace.com.vn, api.s-pace.com.vn"
+    echo "  - DNS A record for api.s-pace.com.vn pointing to server IP"
+    echo "  - Docker and Docker Compose installed"
     echo ""
     exit 0
 fi
