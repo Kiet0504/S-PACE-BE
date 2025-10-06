@@ -20,7 +20,7 @@ import java.util.UUID;
 
 @Service
 @Primary
-@ConditionalOnProperty(name = "app.storage.type", havingValue = "local", matchIfMissing = true)
+@ConditionalOnProperty(name = "storage.type", havingValue = "local", matchIfMissing = true)
 public class FileUploadServiceImpl implements FileUploadService {
 
     private static final Logger logger = LoggerFactory.getLogger(FileUploadServiceImpl.class);

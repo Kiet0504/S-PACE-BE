@@ -22,7 +22,7 @@ import java.util.List;
 import java.util.UUID;
 
 @Service
-@ConditionalOnProperty(name = "app.storage.type", havingValue = "cloud")
+@ConditionalOnProperty(name = "storage.type", havingValue = "cloud")
 public class AwsS3CloudStorageService implements CloudStorageService {
 
     private static final Logger logger = LoggerFactory.getLogger(AwsS3CloudStorageService.class);
