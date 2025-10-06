@@ -67,6 +67,7 @@ CREATE TABLE "user" (
     email VARCHAR(150) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
     avatar VARCHAR(255),
+    gender VARCHAR(20),
     phone VARCHAR(15),
     address VARCHAR(255),
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -83,6 +84,7 @@ CREATE TABLE attendance_logs (
     check_in_time TIMESTAMP NOT NULL,
     check_out_time TIMESTAMP,
     status VARCHAR(20) NOT NULL,
+    participation_status VARCHAR(255) NOT NULL,
     CONSTRAINT fk_attendance_event FOREIGN KEY (event_id) REFERENCES event(event_id),
     CONSTRAINT fk_attendance_user FOREIGN KEY (user_id) REFERENCES "user"(user_id)
 );
@@ -109,7 +111,6 @@ CREATE TABLE event_registration (
     reviewed_at TIMESTAMP,
     review_notes TEXT,
     status VARCHAR(255) NOT NULL,
-    participation_status VARCHAR(255) NOT NULL,
     updated_at TIMESTAMP,
     full_name VARCHAR(255),
     gender VARCHAR(20),
@@ -118,6 +119,7 @@ CREATE TABLE event_registration (
     address TEXT,
     reason_for_participation TEXT,
     file_path VARCHAR(500),
+    birth_year INTEGER,
     CONSTRAINT fk_registration_event FOREIGN KEY (event_id) REFERENCES event(event_id),
     CONSTRAINT fk_registration_user FOREIGN KEY (user_id) REFERENCES "user"(user_id),
     CONSTRAINT fk_registration_reviewer FOREIGN KEY (reviewed_by) REFERENCES "user"(user_id)

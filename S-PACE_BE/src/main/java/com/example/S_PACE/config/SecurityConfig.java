@@ -2,7 +2,6 @@ package com.example.S_PACE.config;
 
 import com.example.S_PACE.config.oauth2.OAuth2SuccessHandler;
 import com.example.S_PACE.utils.JwtAuthenticationFilter;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -24,11 +23,14 @@ import org.springframework.beans.factory.annotation.Value;
 @EnableWebSecurity
 public class SecurityConfig {
 
-    @Autowired
-    private JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final OAuth2SuccessHandler oAuth2SuccessHandler;
 
-    @Autowired
-    private OAuth2SuccessHandler oAuth2SuccessHandler;
+    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter, 
+                         OAuth2SuccessHandler oAuth2SuccessHandler) {
+        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.oAuth2SuccessHandler = oAuth2SuccessHandler;
+    }
 
     @Value("${app.cors.allowed-origins:http://localhost:3000,http://localhost:3001,http://localhost:8080}")
     private String allowedOrigins;
@@ -40,6 +42,10 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/api/auth/**",
+                                "/api/files/**",
+                                "/api/teams",
+                                "/api/event-tasks/**",
+                                "/api/attendance-logs/**",
                                 "/login/oauth2/**",
                                 "/oauth2/**",
                                 "/swagger-ui/**",
@@ -48,6 +54,8 @@ public class SecurityConfig {
                                 "/swagger-resources/**",
                                 "/webjars/**",
                                 "/static/**",
+                                "/images/**",
+                                "/uploads/**",
                                 "/google-login-test.html",
                                 "/api/health/**",
                                 "/h2-console/**",
@@ -57,8 +65,8 @@ public class SecurityConfig {
                 )
                 .oauth2Login(oauth2 -> oauth2
                         .successHandler(oAuth2SuccessHandler)
-                        
-                        .loginPage("/api/auth/google")
+                        .defaultSuccessUrl("/api/auth/google/callback", true)
+                        .failureUrl("/api/auth/google/error")
                 )
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -70,10 +78,23 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList(allowedOrigins.split(",")));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedOrigins(Arrays.asList(
+            "http://localhost:3000",
+            "http://localhost:3001", 
+            "http://localhost:5173",
+            "http://127.0.0.1:3000",
+            "http://127.0.0.1:3001",
+            "http://127.0.0.1:5173",
+            "http://localhost:8080",
+            "https://s-pace.com.vn",
+            "https://www.s-pace.com.vn",
+            "http://s-pace.com.vn",
+            "http://www.s-pace.com.vn"
+        ));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);
+        configuration.setMaxAge(3600L); // Cache preflight response for 1 hour
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);

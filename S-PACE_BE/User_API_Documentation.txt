@@ -1,0 +1,536 @@
+================================================================================
+                    S-PACE USER API DOCUMENTATION
+================================================================================
+
+Base URL: http://localhost:8080/api
+Authentication: Bearer Token (JWT)
+
+================================================================================
+1. USER REGISTRATION (AUTH)
+================================================================================
+
+Endpoint: POST /api/auth/register
+Description: Register a new user account
+Authentication: Not required
+
+INPUT (Request Body):
+{
+  "fullName": "John Doe",           // Required, 2-100 characters
+  "email": "john@example.com",      // Required, valid email, max 150 chars
+  "password": "password123",        // Required, 6-100 characters
+  "confirmPassword": "password123"  // Required, must match password
+}
+
+OUTPUT (Success - 200):
+{
+  "success": true,
+  "message": "User registered successfully",
+  "data": {
+    "userId": "550e8400-e29b-41d4-a716-446655440000",
+    "fullName": "John Doe",
+    "email": "john@example.com",
+    "phone": null,
+    "address": null,
+    "avatar": "/images/avatars/avatar.jpg",  // Default avatar
+    "gender": null,
+    "status": "ACTIVE",
+    "createdAt": "2024-01-01T10:00:00",
+    "role": {
+      "roleId": 1,
+      "roleName": "COLLABORATOR",
+      "description": "Event Collaborator"
+    }
+  }
+}
+
+OUTPUT (Error - 400/409):
+{
+  "success": false,
+  "message": "Error message here",
+  "data": null
+}
+
+================================================================================
+2. USER LOGIN (AUTH)
+================================================================================
+
+Endpoint: POST /api/auth/login
+Description: Login user and get JWT token
+Authentication: Not required
+
+INPUT (Request Body):
+{
+  "email": "john@example.com",      // Required
+  "password": "password123"         // Required
+}
+
+OUTPUT (Success - 200):
+{
+  "success": true,
+  "message": "Login successful",
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "tokenType": "Bearer",
+    "user": {
+      "userId": "550e8400-e29b-41d4-a716-446655440000",
+      "fullName": "John Doe",
+      "email": "john@example.com",
+      "phone": null,
+      "address": null,
+      "avatar": "/images/avatars/avatar.jpg",
+      "gender": null,
+      "status": "ACTIVE",
+      "createdAt": "2024-01-01T10:00:00",
+      "role": {
+        "roleId": 1,
+        "roleName": "COLLABORATOR",
+        "description": "Event Collaborator"
+      }
+    }
+  }
+}
+
+================================================================================
+3. GET ALL USERS (ADMIN)
+================================================================================
+
+Endpoint: GET /api/users
+Description: Get all active users (excludes deleted users)
+Authentication: Required (ADMIN, COMPANY_ADMIN)
+Headers: Authorization: Bearer {token}
+
+INPUT: None
+
+OUTPUT (Success - 200):
+{
+  "success": true,
+  "message": "Users retrieved successfully",
+  "data": [
+    {
+      "userId": "550e8400-e29b-41d4-a716-446655440000",
+      "fullName": "John Doe",
+      "email": "john@example.com",
+      "phone": "+REDACTED_PASSWORD67890",
+      "address": "123 Main St",
+      "avatar": "/images/avatars/avatar.jpg",
+      "gender": "Male",
+      "status": "ACTIVE",
+      "createdAt": "2024-01-01T10:00:00",
+      "role": {
+        "roleId": 1,
+        "roleName": "COLLABORATOR",
+        "description": "Event Collaborator"
+      }
+    }
+  ]
+}
+
+================================================================================
+4. GET USER BY ID
+================================================================================
+
+Endpoint: GET /api/users/{userId}
+Description: Get specific user by ID
+Authentication: Required (ADMIN, COMPANY_ADMIN, or own profile)
+Headers: Authorization: Bearer {token}
+
+INPUT: 
+- Path Parameter: userId (UUID)
+
+OUTPUT (Success - 200):
+{
+  "success": true,
+  "message": "User retrieved successfully",
+  "data": {
+    "userId": "550e8400-e29b-41d4-a716-446655440000",
+    "fullName": "John Doe",
+    "email": "john@example.com",
+    "phone": "+REDACTED_PASSWORD67890",
+    "address": "123 Main St",
+    "avatar": "/images/avatars/avatar.jpg",
+    "gender": "Male",
+    "status": "ACTIVE",
+    "createdAt": "2024-01-01T10:00:00",
+    "role": {
+      "roleId": 1,
+      "roleName": "COLLABORATOR",
+      "description": "Event Collaborator"
+    }
+  }
+}
+
+================================================================================
+5. UPDATE USER PROFILE
+================================================================================
+
+Endpoint: PUT /api/users/{userId}
+Description: Update user information
+Authentication: Required (ADMIN, COMPANY_ADMIN, or own profile)
+Headers: Authorization: Bearer {token}
+
+INPUT (Request Body):
+{
+  "fullName": "John Doe Updated",   // Required, 2-100 characters
+  "email": "john.updated@example.com", // Required, valid email
+  "phone": "+REDACTED_PASSWORD67890",           // Optional, 10-15 characters
+  "address": "123 Updated Street",  // Optional, max 255 characters
+  "gender": "Male",                 // Optional, max 20 characters
+  "avatar": "custom-avatar-url"     // Optional, custom avatar URL
+}
+
+OUTPUT (Success - 200):
+{
+  "success": true,
+  "message": "User updated successfully",
+  "data": {
+    "userId": "550e8400-e29b-41d4-a716-446655440000",
+    "fullName": "John Doe Updated",
+    "email": "john.updated@example.com",
+    "phone": "+REDACTED_PASSWORD67890",
+    "address": "123 Updated Street",
+    "avatar": "custom-avatar-url",
+    "gender": "Male",
+    "status": "ACTIVE",
+    "createdAt": "2024-01-01T10:00:00",
+    "role": {
+      "roleId": 1,
+      "roleName": "COLLABORATOR",
+      "description": "Event Collaborator"
+    }
+  }
+}
+
+================================================================================
+6. UPLOAD USER AVATAR
+================================================================================
+
+Endpoint: POST /api/users/{userId}/avatar
+Description: Upload avatar image for user
+Authentication: Required (ADMIN, COMPANY_ADMIN, or own profile)
+Headers: Authorization: Bearer {token}
+Content-Type: multipart/form-data
+
+INPUT (Form Data):
+- avatar: File (Required) - Image file (JPEG, PNG, GIF, WebP, max 5MB)
+
+OUTPUT (Success - 200):
+{
+  "success": true,
+  "message": "Avatar uploaded successfully",
+  "data": "/uploads/avatars/550e8400-e29b-41d4-a716-446655440000_1704067200000.jpg"
+}
+
+OUTPUT (Error - 400):
+{
+  "success": false,
+  "message": "Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed",
+  "data": null
+}
+
+================================================================================
+7. GET CURRENT USER PROFILE
+================================================================================
+
+Endpoint: GET /api/users/my-profile
+Description: Get current authenticated user's profile
+Authentication: Required (All roles)
+Headers: Authorization: Bearer {token}
+
+INPUT: None
+
+OUTPUT (Success - 200):
+{
+  "success": true,
+  "message": "Profile retrieved successfully",
+  "data": {
+    "userId": "550e8400-e29b-41d4-a716-446655440000",
+    "fullName": "John Doe",
+    "email": "john@example.com",
+    "phone": "+REDACTED_PASSWORD67890",
+    "address": "123 Main St",
+    "avatar": "/uploads/avatars/550e8400-e29b-41d4-a716-446655440000_1704067200000.jpg",
+    "gender": "Male",
+    "status": "ACTIVE",
+    "createdAt": "2024-01-01T10:00:00",
+    "role": {
+      "roleId": 1,
+      "roleName": "COLLABORATOR",
+      "description": "Event Collaborator"
+    }
+  }
+}
+
+================================================================================
+8. GET USERS BY STATUS (ADMIN)
+================================================================================
+
+Endpoint: GET /api/users/status/{status}
+Description: Get users with specific status
+Authentication: Required (ADMIN, COMPANY_ADMIN)
+Headers: Authorization: Bearer {token}
+
+INPUT:
+- Path Parameter: status (PENDING, ACTIVE, INACTIVE, SUSPENDED, DELETED)
+
+OUTPUT (Success - 200):
+{
+  "success": true,
+  "message": "Users retrieved successfully",
+  "data": [
+    {
+      "userId": "550e8400-e29b-41d4-a716-446655440000",
+      "fullName": "John Doe",
+      "email": "john@example.com",
+      "phone": "+REDACTED_PASSWORD67890",
+      "address": "123 Main St",
+      "avatar": "/images/avatars/avatar.jpg",
+      "gender": "Male",
+      "status": "ACTIVE",
+      "createdAt": "2024-01-01T10:00:00",
+      "role": {
+        "roleId": 1,
+        "roleName": "COLLABORATOR",
+        "description": "Event Collaborator"
+      }
+    }
+  ]
+}
+
+================================================================================
+9. GET USERS BY ROLE (ADMIN)
+================================================================================
+
+Endpoint: GET /api/users/role/{roleName}
+Description: Get users with specific role
+Authentication: Required (ADMIN, COMPANY_ADMIN)
+Headers: Authorization: Bearer {token}
+
+INPUT:
+- Path Parameter: roleName (ADMIN, COMPANY_ADMIN, EVENT_MANAGER, TEAM_LEADER, EMPLOYEE, COLLABORATOR)
+
+OUTPUT (Success - 200):
+{
+  "success": true,
+  "message": "Users retrieved successfully",
+  "data": [
+    {
+      "userId": "550e8400-e29b-41d4-a716-446655440000",
+      "fullName": "John Doe",
+      "email": "john@example.com",
+      "phone": "+REDACTED_PASSWORD67890",
+      "address": "123 Main St",
+      "avatar": "/images/avatars/avatar.jpg",
+      "gender": "Male",
+      "status": "ACTIVE",
+      "createdAt": "2024-01-01T10:00:00",
+      "role": {
+        "roleId": 1,
+        "roleName": "COLLABORATOR",
+        "description": "Event Collaborator"
+      }
+    }
+  ]
+}
+
+================================================================================
+10. DELETE USER (ADMIN)
+================================================================================
+
+Endpoint: DELETE /api/users/{userId}
+Description: Soft delete user by changing status to DELETED
+Authentication: Required (ADMIN, COMPANY_ADMIN)
+Headers: Authorization: Bearer {token}
+
+INPUT:
+- Path Parameter: userId (UUID)
+
+OUTPUT (Success - 200):
+{
+  "success": true,
+  "message": "User deleted successfully",
+  "data": null
+}
+
+================================================================================
+ERROR RESPONSES
+================================================================================
+
+All endpoints may return these error responses:
+
+400 Bad Request:
+{
+  "success": false,
+  "message": "Validation error message",
+  "data": null
+}
+
+401 Unauthorized:
+{
+  "success": false,
+  "message": "Invalid or missing token",
+  "data": null
+}
+
+403 Forbidden:
+{
+  "success": false,
+  "message": "Access denied",
+  "data": null
+}
+
+404 Not Found:
+{
+  "success": false,
+  "message": "User not found",
+  "data": null
+}
+
+409 Conflict:
+{
+  "success": false,
+  "message": "User already exists",
+  "data": null
+}
+
+500 Internal Server Error:
+{
+  "success": false,
+  "message": "Internal server error",
+  "data": null
+}
+
+================================================================================
+USER STATUS ENUM VALUES
+================================================================================
+
+PENDING    - User registered but not yet activated
+ACTIVE     - User is active and can use the system
+INACTIVE   - User account is inactive
+SUSPENDED  - User account is suspended
+DELETED    - User account is soft deleted
+
+================================================================================
+USER ROLE ENUM VALUES
+================================================================================
+
+ADMIN           - System Administrator
+COMPANY_ADMIN   - Company Administrator
+EVENT_MANAGER   - Event Manager
+TEAM_LEADER     - Team Leader
+EMPLOYEE        - Regular Employee
+COLLABORATOR    - Event Collaborator
+
+================================================================================
+FILE UPLOAD SPECIFICATIONS
+================================================================================
+
+Avatar Upload:
+- Allowed formats: JPEG, JPG, PNG, GIF, WebP
+- Maximum file size: 5MB
+- File naming: {userId}_{timestamp}.{extension}
+- Storage path: /uploads/avatars/
+- Access URL: http://localhost:8080/uploads/avatars/{filename}
+
+Default Avatar:
+- Path: /images/avatars/avatar.jpg
+- Access URL: http://localhost:8080/images/avatars/avatar.jpg
+- Applied automatically to all new users
+
+================================================================================
+FRONTEND INTEGRATION EXAMPLES
+================================================================================
+
+1. User Registration:
+```javascript
+const registerUser = async (userData) => {
+  const response = await fetch('/api/auth/register', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      fullName: userData.fullName,
+      email: userData.email,
+      password: userData.password,
+      confirmPassword: userData.confirmPassword
+    })
+  });
+  return await response.json();
+};
+```
+
+2. User Login:
+```javascript
+const loginUser = async (email, password) => {
+  const response = await fetch('/api/auth/login', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ email, password })
+  });
+  return await response.json();
+};
+```
+
+3. Upload Avatar:
+```javascript
+const uploadAvatar = async (userId, file, token) => {
+  const formData = new FormData();
+  formData.append('avatar', file);
+  
+  const response = await fetch(`/api/users/${userId}/avatar`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`
+    },
+    body: formData
+  });
+  return await response.json();
+};
+```
+
+4. Update Profile:
+```javascript
+const updateProfile = async (userId, userData, token) => {
+  const response = await fetch(`/api/users/${userId}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify(userData)
+  });
+  return await response.json();
+};
+```
+
+5. Get Current User Profile:
+```javascript
+const getCurrentProfile = async (token) => {
+  const response = await fetch('/api/users/my-profile', {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+  return await response.json();
+};
+```
+
+================================================================================
+NOTES FOR FRONTEND DEVELOPERS
+================================================================================
+
+1. Always include Authorization header with Bearer token for protected endpoints
+2. Handle all error responses appropriately
+3. For file uploads, use FormData and don't set Content-Type header
+4. Default avatar is automatically applied to new users
+5. Avatar URLs are relative paths that need to be prefixed with base URL
+6. User status and role are enums - use exact string values
+7. All timestamps are in ISO 8601 format
+8. UUIDs are used for all user IDs
+9. Password confirmation is required during registration
+10. Email validation is performed on both client and server side
+
+================================================================================ 

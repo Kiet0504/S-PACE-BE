@@ -5,13 +5,13 @@ dns:
   # A record pointing to your VPS IP
   a_record:
     name: "@"
-    content: "YOUR_VPS_IP"
+    content: "REDACTED_IP"
     proxied: true # Enable Cloudflare proxy (orange cloud)
 
   # CNAME for www subdomain
   cname_record:
     name: "www"
-    content: "your-domain.com"
+    content: "s-pace.com.vn"
     proxied: true
 
 # SSL/TLS Settings

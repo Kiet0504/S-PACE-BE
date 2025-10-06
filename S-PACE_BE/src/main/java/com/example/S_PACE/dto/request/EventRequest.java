@@ -4,7 +4,6 @@ import com.example.S_PACE.enums.EventStatus;
 import lombok.Data;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 @Data
 public class EventRequest {
@@ -17,4 +16,5 @@ public class EventRequest {
     private EventStatus status;
     private String requirements;
     private String contactInfo;
+    private String picture;
 }

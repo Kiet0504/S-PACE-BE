@@ -33,7 +33,7 @@ public class User {
     @JoinColumn(name = "team_id", referencedColumnName = "team_id")
     Team team;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "company_id", referencedColumnName = "company_id")
     Company company;
 
@@ -53,6 +53,9 @@ public class User {
 
     @Column(length = 255)
     String address;
+
+    @Column(name = "gender", length = 20)
+    String gender;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     LocalDateTime createdAt;

@@ -8,7 +8,6 @@ import lombok.*;
 import lombok.experimental.FieldDefaults;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
-import org.hibernate.annotations.GenericGenerator;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -55,10 +54,6 @@ public class EventRegistration {
     @Column(name = "status", nullable = false)
     EventRegistrationStatus status = EventRegistrationStatus.PENDING;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "participation_status", nullable = false)
-    ParticipationStatus participationStatus = ParticipationStatus.NOT_ATTENDED;
-
     @UpdateTimestamp
     @Column(name = "updated_at")
     LocalDateTime updatedAt;
@@ -85,4 +80,7 @@ public class EventRegistration {
 
     @Column(name = "file_path")
     String filePath; // Gộp CV và Portfolio thành một file
+
+    @Column(name = "birth_year")
+    Integer birthYear;
 }
