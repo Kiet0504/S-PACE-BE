@@ -19,7 +19,7 @@ public class SwaggerConfig {
     @Value("${server.port:8080}")
     private String serverPort;
 
-    @Value("${swagger.server.url:http://localhost:8080}")
+    @Value("${swagger.server.url:https://api.s-pace.com.vn}")
     private String swaggerServerUrl;
 
     @Bean

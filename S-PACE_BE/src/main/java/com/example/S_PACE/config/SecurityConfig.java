@@ -32,7 +32,7 @@ public class SecurityConfig {
         this.oAuth2SuccessHandler = oAuth2SuccessHandler;
     }
 
-    @Value("${app.cors.allowed-origins:http://localhost:3000,http://localhost:3001,http://localhost:8080}")
+    @Value("${app.cors.allowed-origins:https://s-pace.com.vn,https://www.s-pace.com.vn,https://api.s-pace.com.vn}")
     private String allowedOrigins;
 
     @Bean
@@ -79,17 +79,9 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(Arrays.asList(
-            "http://localhost:3000",
-            "http://localhost:3001", 
-            "http://localhost:5173",
-            "http://127.0.0.1:3000",
-            "http://127.0.0.1:3001",
-            "http://127.0.0.1:5173",
-            "http://localhost:8080",
             "https://s-pace.com.vn",
             "https://www.s-pace.com.vn",
-            "http://s-pace.com.vn",
-            "http://www.s-pace.com.vn"
+            "https://api.s-pace.com.vn"
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
