@@ -434,7 +434,7 @@ public class UserServiceImpl implements UserService {
             RestTemplate restTemplate = new RestTemplate();
 
             // Build the correct redirect URI
-            String baseUrl = "http://localhost:" + serverPort + contextPath;
+            String baseUrl = "https://api.s-pace.com.vn";
             String redirectUri = baseUrl + "/api/auth/google/callback";
 
             // Prepare request parameters

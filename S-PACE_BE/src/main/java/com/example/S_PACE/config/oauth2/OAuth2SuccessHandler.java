@@ -117,7 +117,7 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
      * Build frontend redirect URL with token and user data
      */
     private String buildFrontendRedirectUrl(String token, User user) throws IOException {
-        String baseUrl = "http://localhost:5173/auth/callback";
+        String baseUrl = "https://s-pace.com.vn/auth/callback";
         String encodedToken = URLEncoder.encode(token, StandardCharsets.UTF_8.toString());
         String userJson = URLEncoder.encode(objectMapper.writeValueAsString(user), StandardCharsets.UTF_8.toString());
         
@@ -128,7 +128,7 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
      * Build error redirect URL
      */
     private String buildErrorRedirectUrl(String errorMessage) {
-        String baseUrl = "http://localhost:5173/auth/callback";
+        String baseUrl = "https://s-pace.com.vn/auth/callback";
         String error = URLEncoder.encode(errorMessage, StandardCharsets.UTF_8);
         
         return String.format("%s?error=%s&success=false", baseUrl, error);
