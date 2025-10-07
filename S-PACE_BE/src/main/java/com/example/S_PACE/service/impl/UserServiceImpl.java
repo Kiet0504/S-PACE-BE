@@ -70,9 +70,7 @@ public class UserServiceImpl implements UserService {
     @Autowired
     private UserMapper userMapper;
 
-    // Default avatar URL - configured in application.yml
-    @Value("${app.default-avatar:/images/avatars/avatar.jpg}")
-    private String defaultAvatarUrl;
+    // Avatar will be handled by frontend - no default avatar set in backend
 
     // Google OAuth configuration
     @Value("${spring.security.oauth2.client.registration.google.client-id}")
@@ -131,9 +129,9 @@ public class UserServiceImpl implements UserService {
             user.setPasswordHash(passwordEncoder.encode(signUpRequest.getPassword()));
             user.setRole(userRole);
             
-            // Set default avatar for all new users
-            user.setAvatar(defaultAvatarUrl);
-            logger.info("Using default avatar for new user: {}", defaultAvatarUrl);
+            // Avatar will be handled by frontend - no default avatar set
+            user.setAvatar(null);
+            logger.info("New user created without default avatar - frontend will handle default display");
             
             // Set default values for optional fields (can be updated later in profile)
             user.setPhone(null); // Will be updated in profile
@@ -249,11 +247,11 @@ public class UserServiceImpl implements UserService {
                 user.setStatus(UserStatus.ACTIVE);
             }
 
-            // Set avatar or use default
+            // Set avatar if provided, otherwise leave null for frontend to handle
             if (createRequest.getAvatar() != null && !createRequest.getAvatar().trim().isEmpty()) {
                 user.setAvatar(createRequest.getAvatar());
             } else {
-                user.setAvatar(defaultAvatarUrl);
+                user.setAvatar(null); // Frontend will handle default avatar display
             }
 
             // Set company if provided

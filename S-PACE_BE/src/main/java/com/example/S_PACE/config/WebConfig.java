@@ -66,10 +66,7 @@ public class WebConfig implements WebMvcConfigurer {
                 .addResourceLocations("file:uploads/certificates/")
                 .setCachePeriod(3600);
 
-        // Serve default avatars from classpath
-        registry.addResourceHandler("/images/avatars/**")
-                .addResourceLocations("classpath:/static/images/avatars/")
-                .setCachePeriod(86400); // Cache for 24 hours
+        // Default avatars are now handled by frontend - no backend serving needed
 
         // Serve all uploaded files
         registry.addResourceHandler("/uploads/**")
