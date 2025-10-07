@@ -114,10 +114,22 @@ public class UserServiceImpl implements UserService {
     @Transactional
     private UserResponse performUserRegistration(SignUpRequest signUpRequest) {
         try {
-            // Find COLLABORATOR role (or EMPLOYEE as fallback)
-            Role userRole = roleRepository.findByRoleName("COLLABORATOR")
-                    .orElse(roleRepository.findByRoleName("EMPLOYEE")
-                            .orElseThrow(() -> new RuntimeException(ErrorStatus.ROLE_NOT_FOUND.getDescription())));
+            // Determine desired role from request; allow only EVENT_MANAGER or COLLABORATOR
+            String requestedRoleName = signUpRequest.getRoleName();
+            String effectiveRoleName;
+            if (requestedRoleName == null || requestedRoleName.trim().isEmpty()) {
+                effectiveRoleName = "COLLABORATOR"; // default
+            } else {
+                String upper = requestedRoleName.trim().toUpperCase();
+                if (!upper.equals("EVENT_MANAGER") && !upper.equals("COLLABORATOR")) {
+                    throw new IllegalArgumentException("Invalid role. Allowed: EVENT_MANAGER or COLLABORATOR");
+                }
+                effectiveRoleName = upper;
+            }
+
+            // Find the role in DB
+            Role userRole = roleRepository.findByRoleName(effectiveRoleName)
+                    .orElseThrow(() -> new RuntimeException("Role not found: " + effectiveRoleName));
 
             logger.info("Found role: {} for user registration", userRole.getRoleName());
 
