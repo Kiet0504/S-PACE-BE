@@ -14,7 +14,11 @@ public class WebConfig implements WebMvcConfigurer {
                 .allowedOrigins(
                         "https://s-pace.com.vn",
                         "https://www.s-pace.com.vn",
-                        "https://api.s-pace.com.vn"
+                        "https://api.s-pace.com.vn",
+                        "http://localhost:3000",
+                        "http://localhost:8080",
+                        "http://127.0.0.1:3000",
+                        "http://127.0.0.1:8080"
                 )
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
                 .allowedHeaders("*")
@@ -27,7 +31,11 @@ public class WebConfig implements WebMvcConfigurer {
                         "https://s-pace.com.vn",
                         "https://www.s-pace.com.vn",
                         "https://api.s-pace.com.vn",
-                        "http://api.s-pace.com.vn"
+                        "http://api.s-pace.com.vn",
+                        "http://localhost:3000",
+                        "http://localhost:8080",
+                        "http://127.0.0.1:3000",
+                        "http://127.0.0.1:8080"
                 )
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
                 .allowedHeaders("*")

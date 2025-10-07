@@ -81,7 +81,12 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(Arrays.asList(
             "https://s-pace.com.vn",
             "https://www.s-pace.com.vn",
-            "https://api.s-pace.com.vn"
+            "https://api.s-pace.com.vn",
+            "http://api.s-pace.com.vn",
+            "http://localhost:3000",
+            "http://localhost:8080",
+            "http://127.0.0.1:3000",
+            "http://127.0.0.1:8080"
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
