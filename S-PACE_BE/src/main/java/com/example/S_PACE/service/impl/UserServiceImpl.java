@@ -355,6 +355,9 @@ public class UserServiceImpl implements UserService {
         if (updateRequest.getAvatar() != null) {
             user.setAvatar(updateRequest.getAvatar());
         }
+        if (updateRequest.getCompanyId() != null) {
+            user.setCompanyId(updateRequest.getCompanyId());
+        }
         
         User updatedUser = userRepository.save(user);
         logger.info("User updated successfully with ID: {}", updatedUser.getUserId());

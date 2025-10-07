@@ -32,4 +32,6 @@ public class UserUpdateRequest {
 
     @Size(max = 20, message = "Gender must not exceed 20 characters")
     String gender;
+
+    java.util.UUID companyId;
 } 
