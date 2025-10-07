@@ -116,14 +116,13 @@ public class UserController {
     }
 
     @PutMapping("/{userId}")
-    @Operation(summary = "Update user", description = "Update user information")
+    @Operation(summary = "Update user", description = "Update user information (for registration flow - no authentication required)")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "User updated successfully"),
         @ApiResponse(responseCode = "400", description = "Invalid request data"),
         @ApiResponse(responseCode = "404", description = "User not found"),
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    @PreAuthorize("hasAnyRole('ADMIN', 'COMPANY_ADMIN') or #userId == authentication.principal.userId")
     public ResponseEntity<ResponseDTO<UserResponse>> updateUser(
             @PathVariable UUID userId,
             @Valid @RequestBody UserUpdateRequest updateRequest) {
@@ -255,28 +254,17 @@ public class UserController {
     }
 
     @PutMapping("/{userId}/role")
-    @Operation(summary = "Update user role", description = "Update user's role (for 2-step registration flow)")
+    @Operation(summary = "Update user role", description = "Update user's role (for 2-step registration flow - no authentication required)")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "User role updated successfully"),
         @ApiResponse(responseCode = "400", description = "Invalid role or request data"),
-        @ApiResponse(responseCode = "403", description = "Access denied - User can only update their own role"),
         @ApiResponse(responseCode = "404", description = "User not found"),
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    @PreAuthorize("hasAnyRole('ADMIN', 'COMPANY_ADMIN') or #userId == authentication.principal.userId")
     public ResponseEntity<ResponseDTO<UserResponse>> updateUserRole(
             @PathVariable UUID userId,
-            @Valid @RequestBody RoleUpdateRequest request,
-            HttpServletRequest httpRequest) {
+            @Valid @RequestBody RoleUpdateRequest request) {
         try {
-            // Verify authentication and authorization
-            UUID currentUserId = getUserIdFromToken(httpRequest);
-            if (!currentUserId.equals(userId)) {
-                logger.warn("User {} attempted to update role for different user {}", currentUserId, userId);
-                return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(new ResponseDTO<>(false, "Access denied - You can only update your own role", null));
-            }
-
             logger.info("Updating role for user {} to {}", userId, request.getRoleName());
             UserResponse updatedUser = userService.updateUserRole(userId, request.getRoleName());
             
