@@ -343,19 +343,29 @@ public class UserServiceImpl implements UserService {
         }
         
         // Check if email is being changed and if it already exists
-        if (!user.getEmail().equals(updateRequest.getEmail())) {
+        if (updateRequest.getEmail() != null && !user.getEmail().equals(updateRequest.getEmail())) {
             Optional<User> existingUser = userRepository.findByEmail(updateRequest.getEmail());
             if (existingUser.isPresent() && !existingUser.get().getUserId().equals(userId)) {
                 throw new IllegalArgumentException("Email already exists");
             }
         }
         
-        // Update user fields
-        user.setFullName(updateRequest.getFullName());
-        user.setEmail(updateRequest.getEmail());
-        user.setPhone(updateRequest.getPhone());
-        user.setAddress(updateRequest.getAddress());
-        user.setGender(updateRequest.getGender());
+        // Update user fields only if provided
+        if (updateRequest.getFullName() != null) {
+            user.setFullName(updateRequest.getFullName());
+        }
+        if (updateRequest.getEmail() != null) {
+            user.setEmail(updateRequest.getEmail());
+        }
+        if (updateRequest.getPhone() != null) {
+            user.setPhone(updateRequest.getPhone());
+        }
+        if (updateRequest.getAddress() != null) {
+            user.setAddress(updateRequest.getAddress());
+        }
+        if (updateRequest.getGender() != null) {
+            user.setGender(updateRequest.getGender());
+        }
         if (updateRequest.getAvatar() != null) {
             user.setAvatar(updateRequest.getAvatar());
         }
