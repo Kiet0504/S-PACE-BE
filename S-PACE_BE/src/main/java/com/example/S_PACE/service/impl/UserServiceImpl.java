@@ -404,6 +404,43 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
+    public UserResponse updateUserRole(UUID userId, String roleName) {
+        logger.info("Updating user role for user ID: {} to role: {}", userId, roleName);
+        
+        // Find user by ID
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found with ID: " + userId));
+        
+        if (user.getStatus() == UserStatus.DELETED) {
+            throw new IllegalArgumentException("Cannot update role for deleted user");
+        }
+        
+        // Validate role
+        if (!isValidRole(roleName)) {
+            throw new IllegalArgumentException("Invalid role. Allowed: EVENT_MANAGER or COLLABORATOR");
+        }
+        
+        // Find role entity
+        Role role = roleRepository.findByRoleName(roleName.toUpperCase())
+                .orElseThrow(() -> new IllegalArgumentException("Role not found: " + roleName));
+        
+        // Update user role
+        user.setRole(role);
+        
+        // Save user
+        User updatedUser = userRepository.save(user);
+        logger.info("User role updated successfully for user ID: {} to role: {}", userId, roleName);
+        
+        return userMapper.toUserResponse(updatedUser);
+    }
+    
+    private boolean isValidRole(String roleName) {
+        return "EVENT_MANAGER".equalsIgnoreCase(roleName) ||
+               "COLLABORATOR".equalsIgnoreCase(roleName);
+    }
+
+    @Override
+    @Transactional
     public LoginResponse processGoogleOAuthCallback(String code, String state) {
         logger.info("Processing Google OAuth callback with code: {}", code);
 

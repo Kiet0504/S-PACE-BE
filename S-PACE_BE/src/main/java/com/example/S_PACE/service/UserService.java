@@ -28,4 +28,7 @@ public interface UserService {
     void deleteUser(UUID userId);
     List<UserResponse> getUsersByStatus(UserStatus status);
     List<UserResponse> getUsersByRole(String roleName);
+    
+    // Role update method for 2-step registration
+    UserResponse updateUserRole(UUID userId, String roleName);
 }
