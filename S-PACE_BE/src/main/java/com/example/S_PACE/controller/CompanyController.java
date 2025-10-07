@@ -32,7 +32,7 @@ public class CompanyController {
     private CompanyService companyService;
 
     @PostMapping
-    @Operation(summary = "Create new company", description = "Create a new company")
+    @Operation(summary = "Create new company", description = "Create a new company (Admin/Company Admin only)")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "201", description = "Company created successfully"),
         @ApiResponse(responseCode = "400", description = "Invalid request data or company already exists"),
@@ -250,6 +250,37 @@ public class CompanyController {
             logger.error("Error checking company permissions {}: {}", companyId, ex.getMessage(), ex);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(new ResponseDTO<>(false, "Failed to check permissions", null));
+        }
+    }
+
+    @PostMapping("/user-create")
+    @Operation(summary = "Create company by user", description = "Allow users to create their own company during registration (no authentication required)")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "201", description = "Company created successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid request data or company already exists"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    public ResponseEntity<ResponseDTO<CompanyResponse>> createCompanyByUser(
+            @Valid @RequestBody CompanyRequest companyRequest) {
+        try {
+            logger.info("User creating new company: {}", companyRequest.getCompanyName());
+            
+            // Set default status to ACTIVE for user-created companies
+            if (companyRequest.getStatus() == null) {
+                companyRequest.setStatus(com.example.S_PACE.enums.CompanyStatus.ACTIVE);
+            }
+            
+            CompanyResponse createdCompany = companyService.createCompany(companyRequest);
+            return ResponseEntity.status(HttpStatus.CREATED)
+                .body(new ResponseDTO<>(true, "Company created successfully", createdCompany));
+        } catch (IllegalArgumentException ex) {
+            logger.warn("Company creation validation error: {}", ex.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ResponseDTO<>(false, ex.getMessage(), null));
+        } catch (Exception ex) {
+            logger.error("Error creating company: {}", ex.getMessage(), ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ResponseDTO<>(false, "Failed to create company", null));
         }
     }
 }
