@@ -165,8 +165,8 @@ OUTPUT (Success - 200):
 
 Endpoint: PUT /api/users/{userId}
 Description: Update user information
-Authentication: Required (ADMIN, COMPANY_ADMIN, or own profile)
-Headers: Authorization: Bearer {token}
+Authentication: Not required (for registration flow)
+Headers: Content-Type: application/json
 
 INPUT (Request Body):
 {
@@ -175,7 +175,8 @@ INPUT (Request Body):
   "phone": "+REDACTED_PASSWORD67890",           // Optional, 10-15 characters
   "address": "123 Updated Street",  // Optional, max 255 characters
   "gender": "Male",                 // Optional, max 20 characters
-  "avatar": "custom-avatar-url"     // Optional, custom avatar URL
+  "avatar": "custom-avatar-url",    // Optional, custom avatar URL
+  "companyId": "uuid"               // Optional, company UUID for EVENT_MANAGER
 }
 
 OUTPUT (Success - 200):

@@ -14,6 +14,7 @@ import com.example.S_PACE.pojo.Company;
 import com.example.S_PACE.pojo.Role;
 import com.example.S_PACE.pojo.Team;
 import com.example.S_PACE.pojo.User;
+import com.example.S_PACE.repository.CompanyRepository;
 import com.example.S_PACE.repository.RoleRepository;
 import com.example.S_PACE.repository.TeamRepository;
 import com.example.S_PACE.repository.UserRepository;
@@ -57,6 +58,9 @@ public class UserServiceImpl implements UserService {
 
     @Autowired
     private TeamRepository teamRepository;
+
+    @Autowired
+    private CompanyRepository companyRepository;
 
     @Autowired
     private EntityManager entityManager;
@@ -356,7 +360,10 @@ public class UserServiceImpl implements UserService {
             user.setAvatar(updateRequest.getAvatar());
         }
         if (updateRequest.getCompanyId() != null) {
-            user.setCompanyId(updateRequest.getCompanyId());
+            // Find company by ID and set it
+            Company company = companyRepository.findById(updateRequest.getCompanyId())
+                    .orElseThrow(() -> new IllegalArgumentException("Company not found with ID: " + updateRequest.getCompanyId()));
+            user.setCompany(company);
         }
         
         User updatedUser = userRepository.save(user);
