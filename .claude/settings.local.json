@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mvn compile:*)",
+      "Bash(set PAYOS_CLIENT_ID=test)",
+      "Bash(set PAYOS_API_KEY=test)",
+      "Bash(set PAYOS_CHECKSUM_KEY=test)",
+      "Bash(mvn:*)",
+      "Bash(taskkill:*)",
+      "Bash(cmd /c:*)",
+      "Bash(curl:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(wmic process where:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
