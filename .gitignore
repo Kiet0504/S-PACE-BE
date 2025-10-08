@@ -1,0 +1,93 @@
+# Spring Boot Backend - S-PACE Project
+
+# Compiled class files
+*.class
+
+# Log files
+*.log
+*.log.*
+logs/
+
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+!.mvn/wrapper/maven-wrapper.jar
+
+# IDE
+.idea/
+*.iws
+*.iml
+*.ipr
+.vscode/
+.project
+.settings
+.springBeans
+.sts4-cache
+bin/
+
+# OS
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Application specific
+uploads/*
+!uploads/.gitkeep
+
+# Database
+*.db
+*.sqlite
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Spring Boot local overrides
+application-local.yml
+application-local.properties
+
+# Keep main configs
+!application.yml
+!application-dev.yml
+!application-prod.yml
+!application-test.yml
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.bak
+*.backup
+
+# Security
+*.key
+*.pem
+*.crt
+*.jks
+*.keystore
+secrets.yml
+secrets.properties
+
+# Java
+*.jar
+*.war
+*.ear
+*.zip
+*.tar.gz
+hs_err_pid*
+replay_pid*
+
+# Test reports
+test-results/
+coverage/
+surefire-reports/
+failsafe-reports/

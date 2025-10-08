@@ -1,0 +1,13 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/space_db_dev
+    username: postgres
+    password: REDACTED_PASSWORD
+  jpa:
+    show-sql: true
+  flyway:
+    clean-disabled: false
+logging:
+  level:
+    org.flywaydb: DEBUG
+    com.space: DEBUG

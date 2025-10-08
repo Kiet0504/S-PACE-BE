@@ -1,0 +1,166 @@
+# Event Registration API Documentation
+
+This API provides functionality for collaborators to register for events and for administrators to manage those registrations.
+
+## Authentication
+All endpoints require JWT authentication. Include the token in the Authorization header:
+```
+Authorization: Bearer <your-jwt-token>
+```
+
+## Endpoints
+
+### 1. Register for Event
+**POST** `/api/event-registrations/register`
+- **Description**: Allows collaborators to register for events
+- **Authorization**: COLLABORATOR role required
+- **Request Body**:
+```json
+{
+  "eventId": "uuid",
+  "fullName": "string",
+  "gender": "string",
+  "profession": "string", 
+  "phoneNumber": "string",
+  "address": "string",
+  "reasonForParticipation": "string",
+  "filePath": "string (optional)"
+}
+```
+
+### 2. Update Registration Status
+**PUT** `/api/event-registrations/{registrationId}/status`
+- **Description**: Update the status of an event registration
+- **Authorization**: EVENT_MANAGER, COMPANY_ADMIN, or ADMIN role required
+- **Parameters**: 
+  - `status`: PENDING, APPROVED, REJECTED, CANCELLED
+  - `reviewNotes`: Optional review notes
+
+### 3. Get All Registrations
+**GET** `/api/event-registrations`
+- **Description**: Retrieve all event registrations
+- **Authorization**: EVENT_MANAGER, COMPANY_ADMIN, or ADMIN role required
+
+### 4. Get Registrations by User ID
+**GET** `/api/event-registrations/user/{userId}`
+- **Description**: Retrieve registrations for a specific user
+- **Authorization**: EVENT_MANAGER, COMPANY_ADMIN, ADMIN, or own user ID
+
+### 5. Get Registrations by Event ID
+**GET** `/api/event-registrations/event/{eventId}`
+- **Description**: Retrieve registrations for a specific event
+- **Authorization**: EVENT_MANAGER, COMPANY_ADMIN, or ADMIN role required
+
+### 6. Get Registration by ID
+**GET** `/api/event-registrations/{registrationId}`
+- **Description**: Retrieve a specific registration by its ID
+- **Authorization**: EVENT_MANAGER, COMPANY_ADMIN, ADMIN, or COLLABORATOR role required
+
+### 7. Get Registrations by Status
+**GET** `/api/event-registrations/status/{status}`
+- **Description**: Retrieve registrations with a specific status
+- **Authorization**: EVENT_MANAGER, COMPANY_ADMIN, or ADMIN role required
+
+### 8. Get Current User's Registrations
+**GET** `/api/event-registrations/my-registrations`
+- **Description**: Retrieve registrations for the currently authenticated user
+- **Authorization**: COLLABORATOR role required
+
+### 9. Cancel Registration
+**PUT** `/api/event-registrations/{registrationId}/cancel`
+- **Description**: Cancel your own event registration
+- **Authorization**: COLLABORATOR role required
+
+## Response Format
+All responses follow this format:
+```json
+{
+  "success": boolean,
+  "message": "string",
+  "data": object|array|null
+}
+```
+
+## Status Codes
+- 200: Success
+- 201: Created
+- 400: Bad Request
+- 401: Unauthorized
+- 403: Forbidden
+- 404: Not Found
+- 409: Conflict
+- 500: Internal Server Error
+
+## Registration Status Values
+- **PENDING**: Registration submitted and awaiting review
+- **APPROVED**: Registration approved by administrator
+- **REJECTED**: Registration rejected by administrator
+- **CANCELLED**: Registration cancelled by user or administrator
+
+## Example Usage
+
+### Register for Event
+```bash
+curl -X POST http://localhost:8080/api/event-registrations/register \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "eventId": "123e4567-e89b-12d3-a456-426614174000",
+    "fullName": "John Doe",
+    "gender": "Male",
+    "profession": "Software Engineer",
+    "phoneNumber": "+REDACTED_PASSWORD67890",
+    "address": "123 Main St, City, State",
+    "reasonForParticipation": "I want to learn about new technologies"
+  }'
+```
+
+### Get My Registrations
+```bash
+curl -X GET http://localhost:8080/api/event-registrations/my-registrations \
+  -H "Authorization: Bearer <token>"
+```
+
+### Update Registration Status (Admin)
+```bash
+curl -X PUT "http://localhost:8080/api/event-registrations/123e4567-e89b-12d3-a456-426614174000/status?status=APPROVED&reviewNotes=Approved based on qualifications" \
+  -H "Authorization: Bearer <admin-token>"
+```
+```
+
+I've implemented the complete event registration functionality for collaborators with the following features:
+
+## Key Components Created:
+
+1. **CollaboratorRegistrationRequest DTO** - For registration requests with validation
+2. **EventRegistrationResponse DTO** - For API responses 
+3. **EventRepository** - Recreated since it was deleted
+4. **EventRegistrationRepository** - With comprehensive query methods
+5. **EventRegistrationService & Implementation** - Business logic layer
+6. **EventRegistrationController** - REST API endpoints with proper security
+
+## Key Features Implemented:
+
+✅ **Role-based Access Control**: Only collaborators can register for events
+✅ **Registration Management**: Create, update status, cancel registrations  
+✅ **Comprehensive Queries**: Get by user ID, event ID, registration ID, status
+✅ **Status Management**: PENDING → APPROVED/REJECTED/CANCELLED workflow
+✅ **Security**: JWT-based authentication with role checking
+✅ **Validation**: Input validation and business rule enforcement
+✅ **Error Handling**: Comprehensive exception handling with proper HTTP status codes
+✅ **Logging**: Detailed logging for debugging and monitoring
+✅ **API Documentation**: Complete Swagger annotations and usage examples
+
+## API Endpoints Available:
+
+- `POST /api/event-registrations/register` - Register for event (COLLABORATOR only)
+- `PUT /api/event-registrations/{id}/status` - Update status (ADMIN/MANAGER)
+- `GET /api/event-registrations` - Get all registrations (ADMIN/MANAGER)
+- `GET /api/event-registrations/user/{userId}` - Get by user ID
+- `GET /api/event-registrations/event/{eventId}` - Get by event ID
+- `GET /api/event-registrations/{id}` - Get by registration ID  
+- `GET /api/event-registrations/status/{status}` - Get by status
+- `GET /api/event-registrations/my-registrations` - Get current user's registrations
+- `PUT /api/event-registrations/{id}/cancel` - Cancel registration
+
+The system now supports the complete collaborator registration workflow with proper security, validation, and management capabilities!

@@ -1,0 +1,115 @@
+# Cloudflare Pro Configuration for S-PACE Project
+
+# DNS Settings
+dns:
+  # A record pointing to your VPS IP
+  a_record:
+    name: "@"
+    content: "YOUR_VPS_IP"
+    proxied: true # Enable Cloudflare proxy (orange cloud)
+
+  # CNAME for www subdomain
+  cname_record:
+    name: "www"
+    content: "your-domain.com"
+    proxied: true
+
+# SSL/TLS Settings
+ssl_tls:
+  encryption_mode: "full" # Full (strict) encryption
+  edge_certificates: "on"
+  always_use_https: "on"
+  hsts_enabled: "on"
+  minimum_tls_version: "1.2"
+
+# Security Settings
+security:
+  # WAF (Web Application Firewall)
+  waf:
+    enabled: true
+    sensitivity: "medium"
+    challenge_passage: 30
+
+  # Bot Fight Mode
+  bot_fight_mode:
+    enabled: true
+
+  # Rate Limiting
+  rate_limiting:
+    enabled: true
+    rules:
+      - name: "API Rate Limit"
+        match: "http.request.uri.path contains '/api/'"
+        threshold: 100
+        period: 60
+        action: "block"
+
+      - name: "Auth Rate Limit"
+        match: "http.request.uri.path contains '/api/auth/'"
+        threshold: 20
+        period: 60
+        action: "challenge"
+
+      - name: "Upload Rate Limit"
+        match: "http.request.uri.path contains '/api/upload/'"
+        threshold: 10
+        period: 60
+        action: "challenge"
+
+# Caching Settings
+caching:
+  # Browser Cache TTL
+  browser_cache_ttl: 14400 # 4 hours
+
+  # Cache Level
+  cache_level: "aggressive"
+
+  # Development Mode (disable for production)
+  development_mode: false
+
+  # Purge Cache
+  purge_everything: false
+
+# Performance Settings
+performance:
+  # Auto Minify
+  auto_minify:
+    html: true
+    css: true
+    javascript: true
+
+  # Brotli Compression
+  brotli: "on"
+
+  # HTTP/2
+  http2: "on"
+
+  # HTTP/3 (QUIC)
+  http3: "on"
+
+  # 0-RTT Connection Resumption
+  zero_rtt: "on"
+
+# Page Rules
+page_rules:
+  - url: "your-domain.com/api/*"
+    settings:
+      cache_level: "bypass"
+      security_level: "high"
+      browser_cache_ttl: 0
+
+  - url: "your-domain.com/actuator/*"
+    settings:
+      cache_level: "bypass"
+      security_level: "high"
+      browser_cache_ttl: 0
+
+  - url: "your-domain.com/static/*"
+    settings:
+      cache_level: "cache_everything"
+      browser_cache_ttl: 31536000 # 1 year
+
+# Analytics
+analytics:
+  web_analytics: "on"
+  privacy_first_analytics: "on"
