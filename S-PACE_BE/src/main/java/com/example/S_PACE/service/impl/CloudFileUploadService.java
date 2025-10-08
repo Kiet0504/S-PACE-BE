@@ -73,6 +73,17 @@ public class CloudFileUploadService implements FileUploadService {
     }
 
     @Override
+    public String uploadEventImage(MultipartFile file) throws IOException {
+        logger.info("Uploading event image using {} storage", storageType);
+        
+        if (!isValidImageFile(file)) {
+            throw new IllegalArgumentException("Invalid image file type. Only JPEG, PNG, GIF, and WebP are allowed");
+        }
+
+        return cloudStorageService.uploadEventImage(file);
+    }
+
+    @Override
     public void deleteAvatar(String filePath) throws IOException {
         logger.info("Deleting avatar: {}", filePath);
         cloudStorageService.deleteFile(filePath);

@@ -25,6 +25,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.http.MediaType;
 
 import java.io.IOException;
 import java.util.List;
@@ -49,8 +50,104 @@ public class EventController {
     @Autowired
     private JwtTokenProvider jwtTokenProvider;
 
+    @PostMapping(value = "/create", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(
+        summary = "Create new event with image", 
+        description = "Create a new event for the company with optional image upload. Accepts image files from user's computer (JPEG, PNG, GIF, WebP). Maximum file size: 5MB. Image is stored in AWS S3 cloud storage."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "201", description = "Event created successfully with image uploaded to AWS S3"),
+        @ApiResponse(responseCode = "400", description = "Invalid request data or file"),
+        @ApiResponse(responseCode = "403", description = "Access denied - Event Manager role required"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(
+        description = "Event data and optional image file",
+        content = @io.swagger.v3.oas.annotations.media.Content(
+            mediaType = "multipart/form-data"
+        )
+    )
+    @PreAuthorize("hasRole('EVENT_MANAGER')")
+    public ResponseEntity<ResponseDTO<EventResponse>> createEventWithImage(
+            @RequestParam("eventName") String eventName,
+            @RequestParam("description") String description,
+            @RequestParam("startDate") String startDate,
+            @RequestParam("endDate") String endDate,
+            @RequestParam("location") String location,
+            @RequestParam(value = "maxParticipants", required = false) Integer maxParticipants,
+            @RequestParam(value = "status", required = false) String status,
+            @RequestParam(value = "requirements", required = false) String requirements,
+            @RequestParam(value = "contactInfo", required = false) String contactInfo,
+            @RequestParam(value = "image", required = false) MultipartFile imageFile,
+            @RequestParam UUID companyId) {
+        try {
+            logger.info("Creating new event: {} for company: {}", eventName, companyId);
+            
+            // Validate required fields
+            if (eventName == null || eventName.trim().isEmpty()) {
+                throw new IllegalArgumentException("Event name cannot be null or empty");
+            }
+            
+            if (companyId == null) {
+                throw new IllegalArgumentException("Company ID cannot be null");
+            }
+            
+            // Upload image if provided
+            String imageUrl = null;
+            if (imageFile != null && !imageFile.isEmpty()) {
+                logger.info("Uploading event image");
+                imageUrl = fileUploadService.uploadEventImage(imageFile);
+                logger.info("Event image uploaded to S3: {}", imageUrl);
+            }
+            
+            // Create EventRequest object
+            EventRequest eventRequest = new EventRequest();
+            eventRequest.setEventName(eventName);
+            eventRequest.setDescription(description);
+            eventRequest.setStartDate(java.time.LocalDate.parse(startDate));
+            eventRequest.setEndDate(java.time.LocalDate.parse(endDate));
+            eventRequest.setLocation(location);
+            eventRequest.setMaxParticipants(maxParticipants);
+            eventRequest.setRequirements(requirements);
+            eventRequest.setContactInfo(contactInfo);
+            eventRequest.setPicture(imageUrl); // Set the S3 URL
+            
+            // Parse status if provided
+            if (status != null && !status.trim().isEmpty()) {
+                try {
+                    eventRequest.setStatus(EventStatus.valueOf(status.toUpperCase()));
+                } catch (IllegalArgumentException e) {
+                    logger.warn("Invalid status: {}, using default", status);
+                    eventRequest.setStatus(EventStatus.DRAFT);
+                }
+            } else {
+                eventRequest.setStatus(EventStatus.DRAFT);
+            }
+            
+            // Create event
+            EventResponse createdEvent = eventService.createEvent(eventRequest, companyId);
+            
+            logger.info("Event created successfully with ID: {}", createdEvent.getEventId());
+            return ResponseEntity.status(HttpStatus.CREATED)
+                .body(new ResponseDTO<>(true, "Event created successfully", createdEvent));
+            
+        } catch (IllegalArgumentException ex) {
+            logger.warn("Event creation validation error: {}", ex.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ResponseDTO<>(false, ex.getMessage(), null));
+        } catch (IOException ex) {
+            logger.error("File upload error: {}", ex.getMessage(), ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ResponseDTO<>(false, "Failed to upload event image: " + ex.getMessage(), null));
+        } catch (Exception ex) {
+            logger.error("Error creating event: {}", ex.getMessage(), ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ResponseDTO<>(false, "Failed to create event", null));
+        }
+    }
+
     @PostMapping
-    @Operation(summary = "Create new event", description = "Create a new event for the company with optional picture")
+    @Operation(summary = "Create new event (JSON)", description = "Create a new event for the company without image upload (JSON format)")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "201", description = "Event created successfully"),
         @ApiResponse(responseCode = "400", description = "Invalid request data"),
@@ -74,6 +171,60 @@ public class EventController {
             logger.error("Error creating event: {}", ex.getMessage(), ex);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(new ResponseDTO<>(false, "Failed to create event", null));
+        }
+    }
+
+    @PostMapping(value = "/upload-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(
+        summary = "Upload event image", 
+        description = "Upload event image to AWS S3. Accepts image files from user's computer (JPEG, PNG, GIF, WebP). Maximum file size: 5MB. File is stored in AWS S3 cloud storage."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Event image uploaded successfully to AWS S3. Returns S3 URL."),
+        @ApiResponse(responseCode = "400", description = "Invalid file (wrong type, too large, or empty)"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized - Valid JWT token required"),
+        @ApiResponse(responseCode = "403", description = "Access denied - Event Manager role required"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(
+        description = "Event image file",
+        content = @io.swagger.v3.oas.annotations.media.Content(
+            mediaType = "multipart/form-data"
+        )
+    )
+    @PreAuthorize("hasRole('EVENT_MANAGER')")
+    public ResponseEntity<ResponseDTO<String>> uploadEventImage(
+            @RequestParam("image") MultipartFile imageFile,
+            HttpServletRequest request) {
+        try {
+            logger.info("Uploading event image");
+            
+            // Validate file
+            if (imageFile.isEmpty()) {
+                logger.warn("Event image upload failed: File is empty");
+                return ResponseEntity.badRequest()
+                    .body(new ResponseDTO<>(false, "File is empty", null));
+            }
+            
+            // Upload the event image to AWS S3
+            String imageUrl = fileUploadService.uploadEventImage(imageFile);
+            logger.info("Event image uploaded to S3: {}", imageUrl);
+            
+            logger.info("Event image uploaded successfully");
+            return ResponseEntity.ok(new ResponseDTO<>(true, "Event image uploaded successfully", imageUrl));
+            
+        } catch (IllegalArgumentException ex) {
+            logger.warn("Event image upload validation error: {}", ex.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ResponseDTO<>(false, ex.getMessage(), null));
+        } catch (IOException ex) {
+            logger.error("File upload error: {}", ex.getMessage(), ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ResponseDTO<>(false, "Failed to upload event image: " + ex.getMessage(), null));
+        } catch (Exception ex) {
+            logger.error("Error uploading event image: {}", ex.getMessage(), ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ResponseDTO<>(false, "Failed to upload event image", null));
         }
     }
 

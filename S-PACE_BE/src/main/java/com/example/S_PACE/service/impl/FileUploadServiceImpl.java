@@ -112,6 +112,12 @@ public class FileUploadServiceImpl implements FileUploadService {
     }
 
     @Override
+    public String uploadEventImage(MultipartFile file) throws IOException {
+        // This method is not implemented in local storage
+        throw new UnsupportedOperationException("Event image upload not supported in local storage. Use cloud storage instead.");
+    }
+
+    @Override
     public void deleteFile(String fileUrl) throws IOException {
         deleteAvatar(fileUrl);
     }

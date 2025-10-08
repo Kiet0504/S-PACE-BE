@@ -102,11 +102,13 @@ file:
     cv-dir: ${FILE_UPLOAD_CV_DIR:./uploads/cvs}
     certificate-dir: ${FILE_UPLOAD_CERT_DIR:./uploads/certificates}
     avatar-dir: ${FILE_UPLOAD_AVATAR_DIR:./uploads/avatars}
+    event-dir: ${FILE_UPLOAD_EVENT_DIR:./uploads/events}
     max-file-size: 10MB
     allowed-extensions:
       cv: pdf,doc,docx
       certificate: pdf,png,jpg,jpeg
       avatar: png,jpg,jpeg
+      event: png,jpg,jpeg,gif,webp
 
 server:
   port: ${SERVER_PORT:8080}
