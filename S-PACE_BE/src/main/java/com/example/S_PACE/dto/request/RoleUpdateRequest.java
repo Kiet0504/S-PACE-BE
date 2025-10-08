@@ -16,3 +16,4 @@ public class RoleUpdateRequest {
              message = "Role must be EVENT_MANAGER or COLLABORATOR")
     private String roleName;
 }
+

@@ -13,7 +13,7 @@ import software.amazon.awssdk.transfer.s3.S3TransferManager;
 import java.net.URI;
 
 @Configuration
-@ConditionalOnProperty(name = "storage.type", havingValue = "cloud")
+@ConditionalOnProperty(name = "app.storage.type", havingValue = "cloud")
 public class AwsS3Config {
 
     @Value("${aws.s3.access-key}")

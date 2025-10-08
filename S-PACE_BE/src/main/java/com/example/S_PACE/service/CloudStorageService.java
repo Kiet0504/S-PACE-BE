@@ -35,6 +35,14 @@ public interface CloudStorageService {
     String uploadCertificate(MultipartFile file, UUID userId) throws IOException;
     
     /**
+     * Upload event image to cloud storage
+     * @param file The event image file to upload
+     * @return The public URL of the uploaded file
+     * @throws IOException if upload fails
+     */
+    String uploadEventImage(MultipartFile file) throws IOException;
+    
+    /**
      * Delete file from cloud storage
      * @param fileUrl The public URL of the file to delete
      * @throws IOException if deletion fails

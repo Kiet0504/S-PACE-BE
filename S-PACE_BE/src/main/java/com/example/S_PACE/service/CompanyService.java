@@ -27,3 +27,6 @@ public interface CompanyService {
     boolean existsByName(String companyName);
     boolean canCreateEvents(UUID companyId);
 }
+
+
+

@@ -33,3 +33,6 @@ public interface CompanyRepository extends JpaRepository<Company, UUID> {
     @Query("SELECT c FROM Company c WHERE c.status = 'ACTIVE'")
     List<Company> findCompaniesThatCanCreateEvents();
 }
+
+
+

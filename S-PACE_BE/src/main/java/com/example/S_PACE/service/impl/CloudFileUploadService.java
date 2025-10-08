@@ -17,7 +17,7 @@ import java.util.List;
 import java.util.UUID;
 
 @Service
-@ConditionalOnProperty(name = "storage.type", havingValue = "cloud")
+@ConditionalOnProperty(name = "app.storage.type", havingValue = "cloud")
 public class CloudFileUploadService implements FileUploadService {
 
     private static final Logger logger = LoggerFactory.getLogger(CloudFileUploadService.class);

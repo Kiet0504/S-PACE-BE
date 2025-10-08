@@ -38,7 +38,8 @@ public class SwaggerConfig {
                     .version("1.0")
                     .description("API documentation for S-PACE application"))
                 .servers(List.of(
-                    new Server().url(swaggerServerUrl).description("Production server")
+                    new Server().url("http://localhost:" + serverPort).description("Local Development Server"),
+                    new Server().url(swaggerServerUrl).description("Production Server")
                 ))
                 .addSecurityItem(new SecurityRequirement().addList("bearerAuth"))
                 .components(new Components()
