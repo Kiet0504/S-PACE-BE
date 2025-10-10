@@ -10,6 +10,7 @@ import com.example.S_PACE.pojo.User;
 import com.example.S_PACE.repository.EventRegistrationRepository;
 import com.example.S_PACE.repository.EventRepository;
 import com.example.S_PACE.repository.UserRepository;
+import com.example.S_PACE.service.EmailService;
 import com.example.S_PACE.service.EventRegistrationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,6 +37,9 @@ public class EventRegistrationServiceImpl implements EventRegistrationService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private EmailService emailService;
 
     @Override
     public EventRegistrationResponse registerForEvent(EventRegisterRequest request, UUID userId) {
@@ -81,7 +85,7 @@ public class EventRegistrationServiceImpl implements EventRegistrationService {
     }
 
     @Override
-    public EventRegistrationResponse updateRegistrationStatus(UUID registrationId, EventRegistrationStatus status, 
+    public EventRegistrationResponse updateRegistrationStatus(UUID registrationId, EventRegistrationStatus status,
                                                             String reviewNotes, UUID reviewerId) {
         logger.info("Updating registration status for ID: {} to status: {}", registrationId, status);
 
@@ -91,6 +95,9 @@ public class EventRegistrationServiceImpl implements EventRegistrationService {
         User reviewer = userRepository.findById(reviewerId)
                 .orElseThrow(() -> new IllegalArgumentException("Reviewer not found"));
 
+        // Store old status to check if it changed
+        EventRegistrationStatus oldStatus = registration.getStatus();
+
         registration.setStatus(status);
         registration.setReviewNotes(reviewNotes);
         registration.setReviewedBy(reviewer);
@@ -98,6 +105,18 @@ public class EventRegistrationServiceImpl implements EventRegistrationService {
 
         registration = eventRegistrationRepository.save(registration);
         logger.info("Registration status updated successfully");
+
+        // Send email notification if status changed from PENDING to APPROVED
+        if (oldStatus == EventRegistrationStatus.PENDING && status == EventRegistrationStatus.APPROVED) {
+            try {
+                logger.info("Sending approval email for registration: {}", registrationId);
+                emailService.sendRegistrationApprovedEmail(registration);
+            } catch (Exception e) {
+                logger.error("Failed to send approval email for registration: {}. Error: {}",
+                    registrationId, e.getMessage(), e);
+                // Continue execution even if email fails
+            }
+        }
 
         return mapToResponse(registration);
     }

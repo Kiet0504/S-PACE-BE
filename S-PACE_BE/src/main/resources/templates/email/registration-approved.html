@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đơn đăng ký sự kiện được duyệt</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            background: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        .content {
+            padding: 30px 20px;
+        }
+        .success-icon {
+            text-align: center;
+            font-size: 60px;
+            color: #28a745;
+            margin-bottom: 20px;
+        }
+        .greeting {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .event-details {
+            background-color: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .event-details h3 {
+            margin-top: 0;
+            color: #667eea;
+        }
+        .detail-row {
+            margin: 10px 0;
+        }
+        .detail-label {
+            font-weight: bold;
+            color: #555;
+        }
+        .review-notes {
+            background-color: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .review-notes h4 {
+            margin-top: 0;
+            color: #2196F3;
+        }
+        .footer {
+            background-color: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            font-size: 14px;
+            color: #666;
+            border-top: 1px solid #e0e0e0;
+        }
+        .button {
+            display: inline-block;
+            padding: 12px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+        .button:hover {
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>S-PACE Event Management</h1>
+        </div>
+
+        <div class="content">
+            <div class="success-icon">&#10004;</div>
+
+            <div class="greeting">
+                <p>Xin chào <strong th:text="${userName}">Họ tên</strong>,</p>
+            </div>
+
+            <p>Chúc mừng! Đơn đăng ký tham gia sự kiện của bạn đã được <strong style="color: #28a745;">PHÊ DUYỆT</strong>.</p>
+
+            <div class="event-details">
+                <h3>&#128197; Thông tin sự kiện</h3>
+                <div class="detail-row">
+                    <span class="detail-label">Tên sự kiện:</span>
+                    <span th:text="${eventTitle}">Tên sự kiện</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Thời gian:</span>
+                    <span th:text="${#temporals.format(eventDate, 'dd/MM/yyyy HH:mm')}">01/01/2025 09:00</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Địa điểm:</span>
+                    <span th:text="${eventLocation}">Địa điểm</span>
+                </div>
+            </div>
+
+            <div th:if="${reviewNotes != null and !reviewNotes.isEmpty()}" class="review-notes">
+                <h4>&#128221; Ghi chú từ ban tổ chức</h4>
+                <p th:text="${reviewNotes}">Ghi chú</p>
+            </div>
+
+            <p>Bạn có thể đăng nhập vào hệ thống để xem chi tiết thông tin sự kiện và chuẩn bị cho công việc của mình.</p>
+
+            <div style="text-align: center;">
+                <a href="#" class="button">Xem chi tiết sự kiện</a>
+            </div>
+
+            <p style="margin-top: 30px; font-size: 14px; color: #666;">
+                Nếu bạn có bất kỳ câu hỏi nào, vui lòng liên hệ với ban tổ chức qua email hoặc số điện thoại đã được cung cấp.
+            </p>
+        </div>
+
+        <div class="footer">
+            <p>Email này được gửi tự động từ hệ thống S-PACE.</p>
+            <p>Vui lòng không trả lời email này.</p>
+            <p style="margin-top: 10px;">
+                &copy; 2025 S-PACE Event Management System. All rights reserved.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

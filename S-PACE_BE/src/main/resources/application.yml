@@ -47,14 +47,23 @@ spring:
     port: 587
     username: ${EMAIL_USERNAME}
     password: ${EMAIL_PASSWORD}
+    default-encoding: UTF-8
+    protocol: smtp
+    test-connection: false
     properties:
-      mail.smtp:
-        auth: true
-        starttls.enable: true
-        starttls.required: true
-        connectiontimeout: 5000
-        timeout: 5000
-        writetimeout: 5000
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          ssl:
+            trust: smtp.gmail.com
+            protocols: TLSv1.2
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+        debug: false
 
   data:
     redis:
