@@ -28,4 +28,6 @@ public class SignUpRequest {
     @NotBlank(message = "Confirm password is required")
     @Size(min = 6, max = 100, message = "Confirm password must be between 6 and 100 characters")
     private String confirmPassword;
+
+    private String roleName;
 }

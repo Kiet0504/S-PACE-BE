@@ -126,7 +126,7 @@ public class AuthController {
             // Xử lý lỗi từ Google
             if (error != null) {
                 logger.error("Google OAuth error received: {}", error);
-                String redirectUrl = "http://localhost:5173/auth/callback?error=" +
+                String redirectUrl = "https://s-pace.com.vn/auth/callback?error=" +
                         URLEncoder.encode(error, StandardCharsets.UTF_8.toString());
                 response.sendRedirect(redirectUrl);
                 return;
@@ -143,7 +143,7 @@ public class AuthController {
                 logger.info("Token generated for user: {}", loginResponse.getUser().getEmail());
 
                 // 5. Redirect về frontend với token
-                String redirectUrl = "http://localhost:5173/auth/callback?token=" +
+                String redirectUrl = "https://s-pace.com.vn/auth/callback?token=" +
                         URLEncoder.encode(loginResponse.getToken(), StandardCharsets.UTF_8.toString());
                 
                 logger.info("Redirecting to frontend: {}", redirectUrl);
@@ -153,13 +153,13 @@ public class AuthController {
 
             // Nếu không có code hoặc error
             logger.warn("Google OAuth callback received without code or error");
-            String redirectUrl = "http://localhost:5173/auth/callback?error=" +
+            String redirectUrl = "https://s-pace.com.vn/auth/callback?error=" +
                     URLEncoder.encode("No authorization code received", StandardCharsets.UTF_8.toString());
             response.sendRedirect(redirectUrl);
 
         } catch (Exception e) {
             logger.error("Google OAuth callback error", e);
-            String redirectUrl = "http://localhost:5173/auth/callback?error=" +
+            String redirectUrl = "https://s-pace.com.vn/auth/callback?error=" +
                     URLEncoder.encode("Authentication failed: " + e.getMessage(), StandardCharsets.UTF_8.toString());
             response.sendRedirect(redirectUrl);
         }

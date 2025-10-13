@@ -5,6 +5,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.core.sync.RequestBody;
@@ -21,6 +22,7 @@ import java.util.List;
 import java.util.UUID;
 
 @Service
+@ConditionalOnProperty(name = "app.storage.type", havingValue = "cloud")
 public class AwsS3CloudStorageService implements CloudStorageService {
 
     private static final Logger logger = LoggerFactory.getLogger(AwsS3CloudStorageService.class);
@@ -82,6 +84,17 @@ public class AwsS3CloudStorageService implements CloudStorageService {
         String key = generateFileKey("certificates", userId, file.getOriginalFilename());
         
         return uploadToS3(file, key, "private");
+    }
+
+    @Override
+    public String uploadEventImage(MultipartFile file) throws IOException {
+        logger.info("Uploading event image to S3");
+
+        validateFile(file, ALLOWED_IMAGE_TYPES, "event image");
+
+        String key = generateEventImageKey(file.getOriginalFilename());
+        
+        return uploadToS3(file, key, "public-read");
     }
 
     @Override
@@ -184,6 +197,14 @@ public class AwsS3CloudStorageService implements CloudStorageService {
         
         return String.format("%s/%s/%s_%s_%s%s", 
                 folder, timestamp, userId, uniqueId, System.currentTimeMillis(), fileExtension);
+    }
+
+    private String generateEventImageKey(String originalFilename) {
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd"));
+        String fileExtension = getFileExtension(originalFilename);
+        String uniqueId = UUID.randomUUID().toString();
+        
+        return String.format("events/%s/%s%s", timestamp, uniqueId, fileExtension);
     }
 
     private String generatePublicUrl(String key) {

@@ -14,6 +14,7 @@ import com.example.S_PACE.pojo.Company;
 import com.example.S_PACE.pojo.Role;
 import com.example.S_PACE.pojo.Team;
 import com.example.S_PACE.pojo.User;
+import com.example.S_PACE.repository.CompanyRepository;
 import com.example.S_PACE.repository.RoleRepository;
 import com.example.S_PACE.repository.TeamRepository;
 import com.example.S_PACE.repository.UserRepository;
@@ -59,6 +60,9 @@ public class UserServiceImpl implements UserService {
     private TeamRepository teamRepository;
 
     @Autowired
+    private CompanyRepository companyRepository;
+
+    @Autowired
     private EntityManager entityManager;
 
     @Autowired
@@ -70,9 +74,7 @@ public class UserServiceImpl implements UserService {
     @Autowired
     private UserMapper userMapper;
 
-    // Default avatar URL - configured in application.yml
-    @Value("${app.default-avatar:/images/avatars/avatar.jpg}")
-    private String defaultAvatarUrl;
+    // Avatar will be handled by frontend - no default avatar set in backend
 
     // Google OAuth configuration
     @Value("${spring.security.oauth2.client.registration.google.client-id}")
@@ -116,10 +118,22 @@ public class UserServiceImpl implements UserService {
     @Transactional
     private UserResponse performUserRegistration(SignUpRequest signUpRequest) {
         try {
-            // Find COLLABORATOR role (or EMPLOYEE as fallback)
-            Role userRole = roleRepository.findByRoleName("COLLABORATOR")
-                    .orElse(roleRepository.findByRoleName("EMPLOYEE")
-                            .orElseThrow(() -> new RuntimeException(ErrorStatus.ROLE_NOT_FOUND.getDescription())));
+            // Determine desired role from request; allow only EVENT_MANAGER or COLLABORATOR
+            String requestedRoleName = signUpRequest.getRoleName();
+            String effectiveRoleName;
+            if (requestedRoleName == null || requestedRoleName.trim().isEmpty()) {
+                effectiveRoleName = "COLLABORATOR"; // default
+            } else {
+                String upper = requestedRoleName.trim().toUpperCase();
+                if (!upper.equals("EVENT_MANAGER") && !upper.equals("COLLABORATOR")) {
+                    throw new IllegalArgumentException("Invalid role. Allowed: EVENT_MANAGER or COLLABORATOR");
+                }
+                effectiveRoleName = upper;
+            }
+
+            // Find the role in DB
+            Role userRole = roleRepository.findByRoleName(effectiveRoleName)
+                    .orElseThrow(() -> new RuntimeException("Role not found: " + effectiveRoleName));
 
             logger.info("Found role: {} for user registration", userRole.getRoleName());
 
@@ -131,9 +145,9 @@ public class UserServiceImpl implements UserService {
             user.setPasswordHash(passwordEncoder.encode(signUpRequest.getPassword()));
             user.setRole(userRole);
             
-            // Set default avatar for all new users
-            user.setAvatar(defaultAvatarUrl);
-            logger.info("Using default avatar for new user: {}", defaultAvatarUrl);
+            // Avatar will be handled by frontend - no default avatar set
+            user.setAvatar(null);
+            logger.info("New user created without default avatar - frontend will handle default display");
             
             // Set default values for optional fields (can be updated later in profile)
             user.setPhone(null); // Will be updated in profile
@@ -249,11 +263,11 @@ public class UserServiceImpl implements UserService {
                 user.setStatus(UserStatus.ACTIVE);
             }
 
-            // Set avatar or use default
+            // Set avatar if provided, otherwise leave null for frontend to handle
             if (createRequest.getAvatar() != null && !createRequest.getAvatar().trim().isEmpty()) {
                 user.setAvatar(createRequest.getAvatar());
             } else {
-                user.setAvatar(defaultAvatarUrl);
+                user.setAvatar(null); // Frontend will handle default avatar display
             }
 
             // Set company if provided
@@ -329,21 +343,37 @@ public class UserServiceImpl implements UserService {
         }
         
         // Check if email is being changed and if it already exists
-        if (!user.getEmail().equals(updateRequest.getEmail())) {
+        if (updateRequest.getEmail() != null && !user.getEmail().equals(updateRequest.getEmail())) {
             Optional<User> existingUser = userRepository.findByEmail(updateRequest.getEmail());
             if (existingUser.isPresent() && !existingUser.get().getUserId().equals(userId)) {
                 throw new IllegalArgumentException("Email already exists");
             }
         }
         
-        // Update user fields
-        user.setFullName(updateRequest.getFullName());
-        user.setEmail(updateRequest.getEmail());
-        user.setPhone(updateRequest.getPhone());
-        user.setAddress(updateRequest.getAddress());
-        user.setGender(updateRequest.getGender());
+        // Update user fields only if provided
+        if (updateRequest.getFullName() != null) {
+            user.setFullName(updateRequest.getFullName());
+        }
+        if (updateRequest.getEmail() != null) {
+            user.setEmail(updateRequest.getEmail());
+        }
+        if (updateRequest.getPhone() != null) {
+            user.setPhone(updateRequest.getPhone());
+        }
+        if (updateRequest.getAddress() != null) {
+            user.setAddress(updateRequest.getAddress());
+        }
+        if (updateRequest.getGender() != null) {
+            user.setGender(updateRequest.getGender());
+        }
         if (updateRequest.getAvatar() != null) {
             user.setAvatar(updateRequest.getAvatar());
+        }
+        if (updateRequest.getCompanyId() != null) {
+            // Find company by ID and set it
+            Company company = companyRepository.findById(updateRequest.getCompanyId())
+                    .orElseThrow(() -> new IllegalArgumentException("Company not found with ID: " + updateRequest.getCompanyId()));
+            user.setCompany(company);
         }
         
         User updatedUser = userRepository.save(user);
@@ -394,6 +424,43 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
+    public UserResponse updateUserRole(UUID userId, String roleName) {
+        logger.info("Updating user role for user ID: {} to role: {}", userId, roleName);
+        
+        // Find user by ID
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found with ID: " + userId));
+        
+        if (user.getStatus() == UserStatus.DELETED) {
+            throw new IllegalArgumentException("Cannot update role for deleted user");
+        }
+        
+        // Validate role
+        if (!isValidRole(roleName)) {
+            throw new IllegalArgumentException("Invalid role. Allowed: EVENT_MANAGER or COLLABORATOR");
+        }
+        
+        // Find role entity
+        Role role = roleRepository.findByRoleName(roleName.toUpperCase())
+                .orElseThrow(() -> new IllegalArgumentException("Role not found: " + roleName));
+        
+        // Update user role
+        user.setRole(role);
+        
+        // Save user
+        User updatedUser = userRepository.save(user);
+        logger.info("User role updated successfully for user ID: {} to role: {}", userId, roleName);
+        
+        return userMapper.toUserResponse(updatedUser);
+    }
+    
+    private boolean isValidRole(String roleName) {
+        return "EVENT_MANAGER".equalsIgnoreCase(roleName) ||
+               "COLLABORATOR".equalsIgnoreCase(roleName);
+    }
+
+    @Override
+    @Transactional
     public LoginResponse processGoogleOAuthCallback(String code, String state) {
         logger.info("Processing Google OAuth callback with code: {}", code);
 
@@ -434,7 +501,7 @@ public class UserServiceImpl implements UserService {
             RestTemplate restTemplate = new RestTemplate();
 
             // Build the correct redirect URI
-            String baseUrl = "http://localhost:" + serverPort + contextPath;
+            String baseUrl = "https://api.s-pace.com.vn";
             String redirectUri = baseUrl + "/api/auth/google/callback";
 
             // Prepare request parameters

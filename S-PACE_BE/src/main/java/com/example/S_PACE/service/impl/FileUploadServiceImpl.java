@@ -4,6 +4,8 @@ import com.example.S_PACE.service.FileUploadService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -17,6 +19,8 @@ import java.util.List;
 import java.util.UUID;
 
 @Service
+@Primary
+@ConditionalOnProperty(name = "app.storage.type", havingValue = "local", matchIfMissing = true)
 public class FileUploadServiceImpl implements FileUploadService {
 
     private static final Logger logger = LoggerFactory.getLogger(FileUploadServiceImpl.class);
@@ -105,6 +109,12 @@ public class FileUploadServiceImpl implements FileUploadService {
     public String uploadCertificate(MultipartFile file, UUID userId) throws IOException {
         // This method is not implemented in local storage
         throw new UnsupportedOperationException("Certificate upload not supported in local storage. Use cloud storage instead.");
+    }
+
+    @Override
+    public String uploadEventImage(MultipartFile file) throws IOException {
+        // This method is not implemented in local storage
+        throw new UnsupportedOperationException("Event image upload not supported in local storage. Use cloud storage instead.");
     }
 
     @Override

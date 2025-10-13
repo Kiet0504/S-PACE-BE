@@ -2,24 +2,22 @@ package com.example.S_PACE.controller;
 
 import com.example.S_PACE.dto.response.FileUploadResponse;
 import com.example.S_PACE.dto.response.ResponseDTO;
+import com.example.S_PACE.service.CloudStorageService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/files")
@@ -29,18 +27,29 @@ public class FileUploadController {
     private static final Logger logger = LoggerFactory.getLogger(FileUploadController.class);
     private static final long MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
-    @Value("${file.upload-dir:./uploads}")
-    private String uploadDir;
+    @Autowired
+    private CloudStorageService cloudStorageService;
 
-    @PostMapping("/upload")
-    @Operation(summary = "Upload file", description = "Upload an image file")
+    @Value("${app.storage.type:cloud}")
+    private String storageType;
+
+    @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Upload file", description = "Upload an image file to AWS S3")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "File uploaded successfully"),
             @ApiResponse(responseCode = "400", description = "Invalid file or file too large"),
             @ApiResponse(responseCode = "500", description = "Upload failed")
     })
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(
+        description = "Image file to upload",
+        content = @io.swagger.v3.oas.annotations.media.Content(
+            mediaType = "multipart/form-data"
+        )
+    )
     public ResponseEntity<ResponseDTO<FileUploadResponse>> uploadFile(@RequestParam("file") MultipartFile file) {
         try {
+            logger.info("Uploading file using {} storage", storageType);
+            
             // Validate file is not empty
             if (file.isEmpty()) {
                 logger.warn("Upload failed: File is empty");
@@ -63,31 +72,19 @@ public class FileUploadController {
                         .body(new ResponseDTO<>(false, "Only image files are allowed", null));
             }
 
-            // Create upload directory if it doesn't exist
-            Path uploadPath = Paths.get(uploadDir);
-            if (!Files.exists(uploadPath)) {
-                Files.createDirectories(uploadPath);
-                logger.info("Created upload directory: {}", uploadPath.toAbsolutePath());
-            }
+            // Upload to AWS S3 using CloudStorageService
+            String fileUrl = cloudStorageService.uploadEventImage(file);
+            
+            logger.info("File uploaded successfully to S3: {}", fileUrl);
 
-            // Generate unique filename
-            String originalFilename = file.getOriginalFilename();
-            String fileExtension = "";
-            if (originalFilename != null && originalFilename.contains(".")) {
-                fileExtension = originalFilename.substring(originalFilename.lastIndexOf("."));
-            }
-            String uniqueFilename = UUID.randomUUID().toString() + fileExtension;
-
-            // Save file
-            Path filePath = uploadPath.resolve(uniqueFilename);
-            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
-
-            logger.info("File uploaded successfully: {}", uniqueFilename);
-
-            // Return response
-            FileUploadResponse fileResponse = new FileUploadResponse("/uploads/" + uniqueFilename);
+            // Return response with S3 URL
+            FileUploadResponse fileResponse = new FileUploadResponse(fileUrl);
             return ResponseEntity.ok(new ResponseDTO<>(true, "File uploaded successfully", fileResponse));
 
+        } catch (IllegalArgumentException e) {
+            logger.warn("Upload validation failed: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(new ResponseDTO<>(false, e.getMessage(), null));
         } catch (IOException e) {
             logger.error("File upload failed: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

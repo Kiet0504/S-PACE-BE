@@ -9,6 +9,7 @@ public interface FileUploadService {
     String uploadAvatar(MultipartFile file, UUID userId) throws IOException;
     String uploadCV(MultipartFile file, UUID userId) throws IOException;
     String uploadCertificate(MultipartFile file, UUID userId) throws IOException;
+    String uploadEventImage(MultipartFile file) throws IOException;
     void deleteAvatar(String filePath) throws IOException;
     void deleteFile(String fileUrl) throws IOException;
     boolean isValidImageFile(MultipartFile file);

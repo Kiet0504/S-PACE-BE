@@ -12,16 +12,13 @@ public class WebConfig implements WebMvcConfigurer {
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/api/**")
                 .allowedOrigins(
-                        "http://localhost:3000",
-                        "http://localhost:3001",
-                        "http://localhost:5173",
-                        "http://127.0.0.1:3000",
-                        "http://127.0.0.1:3001",
-                        "http://127.0.0.1:5173",
                         "https://s-pace.com.vn",
                         "https://www.s-pace.com.vn",
-                        "http://s-pace.com.vn",
-                        "http://www.s-pace.com.vn"
+                        "https://api.s-pace.com.vn",
+                        "http://localhost:3000",
+                        "http://localhost:8080",
+                        "http://127.0.0.1:3000",
+                        "http://127.0.0.1:8080"
                 )
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
                 .allowedHeaders("*")
@@ -32,7 +29,13 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addMapping("/**")
                 .allowedOrigins(
                         "https://s-pace.com.vn",
-                        "https://www.s-pace.com.vn"
+                        "https://www.s-pace.com.vn",
+                        "https://api.s-pace.com.vn",
+                        "http://api.s-pace.com.vn",
+                        "http://localhost:3000",
+                        "http://localhost:8080",
+                        "http://127.0.0.1:3000",
+                        "http://127.0.0.1:8080"
                 )
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
                 .allowedHeaders("*")
@@ -63,10 +66,7 @@ public class WebConfig implements WebMvcConfigurer {
                 .addResourceLocations("file:uploads/certificates/")
                 .setCachePeriod(3600);
 
-        // Serve default avatars from classpath
-        registry.addResourceHandler("/images/avatars/**")
-                .addResourceLocations("classpath:/static/images/avatars/")
-                .setCachePeriod(86400); // Cache for 24 hours
+        // Default avatars are now handled by frontend - no backend serving needed
 
         // Serve all uploaded files
         registry.addResourceHandler("/uploads/**")

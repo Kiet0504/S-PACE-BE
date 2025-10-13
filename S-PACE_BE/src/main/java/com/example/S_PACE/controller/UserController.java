@@ -1,6 +1,7 @@
 package com.example.S_PACE.controller;
 
 import com.example.S_PACE.dto.request.AdminCreateUserRequest;
+import com.example.S_PACE.dto.request.RoleUpdateRequest;
 import com.example.S_PACE.dto.request.UserUpdateRequest;
 import com.example.S_PACE.dto.response.ResponseDTO;
 import com.example.S_PACE.dto.response.UserResponse;
@@ -18,6 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.util.StringUtils;
@@ -115,14 +117,13 @@ public class UserController {
     }
 
     @PutMapping("/{userId}")
-    @Operation(summary = "Update user", description = "Update user information")
+    @Operation(summary = "Update user", description = "Update user information (for registration flow - no authentication required)")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "User updated successfully"),
         @ApiResponse(responseCode = "400", description = "Invalid request data"),
         @ApiResponse(responseCode = "404", description = "User not found"),
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    @PreAuthorize("hasAnyRole('ADMIN', 'COMPANY_ADMIN') or #userId == authentication.principal.userId")
     public ResponseEntity<ResponseDTO<UserResponse>> updateUser(
             @PathVariable UUID userId,
             @Valid @RequestBody UserUpdateRequest updateRequest) {
@@ -141,13 +142,25 @@ public class UserController {
         }
     }
 
-    @PostMapping("/{userId}/avatar")
-    @Operation(summary = "Upload user avatar", description = "Upload avatar image for user")
+    @PostMapping(value = "/{userId}/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(
+        summary = "Upload user avatar",
+        description = "Upload avatar image for specific user. Accepts image files from user's computer (JPEG, PNG, GIF, WebP). Maximum file size: 5MB. Old avatar will be automatically deleted. File is stored in AWS S3 cloud storage."
+    )
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Avatar uploaded successfully"),
-        @ApiResponse(responseCode = "400", description = "Invalid file or user not found"),
+        @ApiResponse(responseCode = "200", description = "Avatar uploaded successfully to AWS S3. Returns S3 URL."),
+        @ApiResponse(responseCode = "400", description = "Invalid file (wrong type, too large, or empty)"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized - Valid JWT token required"),
+        @ApiResponse(responseCode = "403", description = "Forbidden - Only ADMIN or COMPANY_ADMIN can upload for other users"),
+        @ApiResponse(responseCode = "404", description = "User not found"),
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(
+        description = "Avatar image file",
+        content = @io.swagger.v3.oas.annotations.media.Content(
+            mediaType = "multipart/form-data"
+        )
+    )
     @PreAuthorize("hasAnyRole('ADMIN', 'COMPANY_ADMIN') or #userId == authentication.principal.userId")
     public ResponseEntity<ResponseDTO<String>> uploadAvatar(
             @PathVariable UUID userId,
@@ -156,11 +169,29 @@ public class UserController {
         try {
             logger.info("Uploading avatar for user: {}", userId);
             
-            // Verify user exists and has permission
+            // Validate file
+            if (avatarFile.isEmpty()) {
+                logger.warn("Avatar upload failed: File is empty");
+                return ResponseEntity.badRequest()
+                    .body(new ResponseDTO<>(false, "File is empty", null));
+            }
+            
+            // Get user info
             UserResponse user = userService.getUserById(userId);
             
-            // Upload the file
-            String avatarPath = fileUploadService.uploadAvatar(avatarFile, userId);
+            // Delete old avatar if exists
+            if (user.getAvatar() != null && !user.getAvatar().isEmpty()) {
+                try {
+                    fileUploadService.deleteAvatar(user.getAvatar());
+                    logger.info("Old avatar deleted for user: {}", userId);
+                } catch (Exception e) {
+                    logger.warn("Failed to delete old avatar: {}", e.getMessage());
+                }
+            }
+            
+            // Upload the new avatar to AWS S3
+            String avatarUrl = fileUploadService.uploadAvatar(avatarFile, userId);
+            logger.info("Avatar uploaded to S3: {}", avatarUrl);
             
             // Update user's avatar in database
             UserUpdateRequest updateRequest = new UserUpdateRequest();
@@ -169,23 +200,23 @@ public class UserController {
             updateRequest.setPhone(user.getPhone());
             updateRequest.setAddress(user.getAddress());
             updateRequest.setGender(user.getGender());
-            updateRequest.setAvatar(avatarPath);
+            updateRequest.setAvatar(avatarUrl);
             
             userService.updateUser(userId, updateRequest);
             
             logger.info("Avatar uploaded and updated successfully for user: {}", userId);
-            return ResponseEntity.ok(new ResponseDTO<>(true, "Avatar uploaded successfully", avatarPath));
+            return ResponseEntity.ok(new ResponseDTO<>(true, "Avatar uploaded successfully", avatarUrl));
             
         } catch (IllegalArgumentException ex) {
             logger.warn("Avatar upload validation error: {}", ex.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(new ResponseDTO<>(false, ex.getMessage(), null));
         } catch (IOException ex) {
-            logger.error("File upload error for user {}: {}", userId, ex.getMessage(), ex);
+            logger.error("File upload error: {}", ex.getMessage(), ex);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(new ResponseDTO<>(false, "Failed to upload avatar", null));
+                .body(new ResponseDTO<>(false, "Failed to upload avatar: " + ex.getMessage(), null));
         } catch (Exception ex) {
-            logger.error("Error uploading avatar for user {}: {}", userId, ex.getMessage(), ex);
+            logger.error("Error uploading avatar: {}", ex.getMessage(), ex);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(new ResponseDTO<>(false, "Failed to upload avatar", null));
         }
@@ -253,6 +284,38 @@ public class UserController {
         }
     }
 
+    @PutMapping("/{userId}/role")
+    @Operation(summary = "Update user role", description = "Update user's role (for 2-step registration flow - no authentication required)")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "User role updated successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid role or request data"),
+        @ApiResponse(responseCode = "404", description = "User not found"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    public ResponseEntity<ResponseDTO<UserResponse>> updateUserRole(
+            @PathVariable UUID userId,
+            @Valid @RequestBody RoleUpdateRequest request) {
+        try {
+            logger.info("Updating role for user {} to {}", userId, request.getRoleName());
+            UserResponse updatedUser = userService.updateUserRole(userId, request.getRoleName());
+            
+            return ResponseEntity.ok(new ResponseDTO<>(
+                true,
+                "User role updated successfully",
+                updatedUser
+            ));
+
+        } catch (IllegalArgumentException ex) {
+            logger.warn("Role update validation error: {}", ex.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ResponseDTO<>(false, ex.getMessage(), null));
+        } catch (Exception ex) {
+            logger.error("Error updating user role for {}: {}", userId, ex.getMessage(), ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ResponseDTO<>(false, "Failed to update user role", null));
+        }
+    }
+
     @GetMapping("/my-profile")
     @Operation(summary = "Get current user profile", description = "Retrieve the current authenticated user's profile")
     @ApiResponses(value = {
@@ -278,13 +341,23 @@ public class UserController {
         }
     }
 
-    @PostMapping("/my-profile/avatar")
-    @Operation(summary = "Upload current user's avatar", description = "Upload avatar image for the current authenticated user")
+    @PostMapping(value = "/my-profile/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(
+        summary = "Upload current user's avatar", 
+        description = "Upload avatar image for the current authenticated user. Accepts image files from user's computer (JPEG, PNG, GIF, WebP). Maximum file size: 5MB. Old avatar will be automatically deleted. File is stored in AWS S3 cloud storage."
+    )
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Avatar uploaded successfully"),
-        @ApiResponse(responseCode = "400", description = "Invalid file"),
+        @ApiResponse(responseCode = "200", description = "Avatar uploaded successfully to AWS S3. Returns S3 URL."),
+        @ApiResponse(responseCode = "400", description = "Invalid file (wrong type, too large, or empty)"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized - Valid JWT token required"),
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(
+        description = "Avatar image file",
+        content = @io.swagger.v3.oas.annotations.media.Content(
+            mediaType = "multipart/form-data"
+        )
+    )
     @PreAuthorize("hasAnyRole('ADMIN', 'COMPANY_ADMIN', 'EVENT_MANAGER', 'TEAM_LEADER', 'EMPLOYEE', 'COLLABORATOR')")
     public ResponseEntity<ResponseDTO<String>> uploadMyAvatar(
             @RequestParam("avatar") MultipartFile avatarFile,
@@ -293,6 +366,13 @@ public class UserController {
             UUID userId = getUserIdFromToken(request);
             logger.info("User {} uploading their avatar", userId);
             
+            // Validate file
+            if (avatarFile.isEmpty()) {
+                logger.warn("Avatar upload failed: File is empty");
+                return ResponseEntity.badRequest()
+                    .body(new ResponseDTO<>(false, "File is empty", null));
+            }
+            
             // Get user info
             UserResponse user = userService.getUserById(userId);
             
@@ -300,13 +380,15 @@ public class UserController {
             if (user.getAvatar() != null && !user.getAvatar().isEmpty()) {
                 try {
                     fileUploadService.deleteAvatar(user.getAvatar());
+                    logger.info("Old avatar deleted for user: {}", userId);
                 } catch (Exception e) {
                     logger.warn("Failed to delete old avatar: {}", e.getMessage());
                 }
             }
             
-            // Upload the new avatar
-            String avatarPath = fileUploadService.uploadAvatar(avatarFile, userId);
+            // Upload the new avatar to AWS S3
+            String avatarUrl = fileUploadService.uploadAvatar(avatarFile, userId);
+            logger.info("Avatar uploaded to S3: {}", avatarUrl);
             
             // Update user's avatar in database
             UserUpdateRequest updateRequest = new UserUpdateRequest();
@@ -315,12 +397,12 @@ public class UserController {
             updateRequest.setPhone(user.getPhone());
             updateRequest.setAddress(user.getAddress());
             updateRequest.setGender(user.getGender());
-            updateRequest.setAvatar(avatarPath);
+            updateRequest.setAvatar(avatarUrl);
             
             userService.updateUser(userId, updateRequest);
             
             logger.info("Avatar uploaded and updated successfully for user: {}", userId);
-            return ResponseEntity.ok(new ResponseDTO<>(true, "Avatar uploaded successfully", avatarPath));
+            return ResponseEntity.ok(new ResponseDTO<>(true, "Avatar uploaded successfully", avatarUrl));
             
         } catch (IllegalArgumentException ex) {
             logger.warn("Avatar upload validation error: {}", ex.getMessage());
@@ -329,7 +411,7 @@ public class UserController {
         } catch (IOException ex) {
             logger.error("File upload error: {}", ex.getMessage(), ex);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(new ResponseDTO<>(false, "Failed to upload avatar", null));
+                .body(new ResponseDTO<>(false, "Failed to upload avatar: " + ex.getMessage(), null));
         } catch (Exception ex) {
             logger.error("Error uploading avatar: {}", ex.getMessage(), ex);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

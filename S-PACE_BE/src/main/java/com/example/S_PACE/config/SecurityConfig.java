@@ -17,6 +17,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
+import org.springframework.beans.factory.annotation.Value;
 
 @Configuration
 @EnableWebSecurity
@@ -31,6 +32,9 @@ public class SecurityConfig {
         this.oAuth2SuccessHandler = oAuth2SuccessHandler;
     }
 
+    @Value("${app.cors.allowed-origins:https://s-pace.com.vn,https://www.s-pace.com.vn,https://api.s-pace.com.vn}")
+    private String allowedOrigins;
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
@@ -42,6 +46,9 @@ public class SecurityConfig {
                                 "/api/teams",
                                 "/api/event-tasks/**",
                                 "/api/attendance-logs/**",
+                                "/api/companies/user-create",
+                                "/api/users/*/role",
+                                "/api/users/*",
                                 "/login/oauth2/**",
                                 "/oauth2/**",
                                 "/swagger-ui/**",
@@ -75,17 +82,14 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(Arrays.asList(
-            "http://localhost:3000",
-            "http://localhost:3001", 
-            "http://localhost:5173",
-            "http://127.0.0.1:3000",
-            "http://127.0.0.1:3001",
-            "http://127.0.0.1:5173",
-            "http://localhost:8080",
             "https://s-pace.com.vn",
             "https://www.s-pace.com.vn",
-            "http://s-pace.com.vn",
-            "http://www.s-pace.com.vn"
+            "https://api.s-pace.com.vn",
+            "http://api.s-pace.com.vn",
+            "http://localhost:3000",
+            "http://localhost:8080",
+            "http://127.0.0.1:3000",
+            "http://127.0.0.1:8080"
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(Arrays.asList("*"));

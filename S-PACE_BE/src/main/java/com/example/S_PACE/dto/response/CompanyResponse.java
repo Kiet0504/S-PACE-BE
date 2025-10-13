@@ -1,11 +1,11 @@
 package com.example.S_PACE.dto.response;
 
+import com.example.S_PACE.enums.CompanyStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Data
@@ -15,10 +15,6 @@ import java.util.UUID;
 public class CompanyResponse {
     private UUID companyId;
     private String companyName;
-    private String description;
     private String address;
-    private String contactInfo;
-    private String website;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    private CompanyStatus status;
 }
