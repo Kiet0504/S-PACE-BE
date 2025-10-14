@@ -18,6 +18,7 @@ public class EventRegistrationResponse {
     UUID eventRegistrationId;
     UUID eventId;
     String eventTitle;
+    String eventPicture; // Event picture from Event entity
     UUID userId;
     String userEmail;
     LocalDateTime registrationDate;

@@ -201,6 +201,7 @@ public class EventRegistrationServiceImpl implements EventRegistrationService {
                 .eventRegistrationId(registration.getEventRegistrationId())
                 .eventId(registration.getEvent().getEventId())
                 .eventTitle(registration.getEvent().getTitle())
+                .eventPicture(registration.getEvent().getPicture())
                 .userId(registration.getUser().getUserId())
                 .userEmail(registration.getUser().getEmail())
                 .registrationDate(registration.getRegistrationDate())

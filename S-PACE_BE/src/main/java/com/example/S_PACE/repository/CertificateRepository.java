@@ -12,19 +12,21 @@ import java.util.UUID;
 
 @Repository
 public interface CertificateRepository extends JpaRepository<Certificates, UUID> {
-    
-    List<Certificates> findByEventEventId(UUID eventId);
-    
-    List<Certificates> findByUserUserId(UUID userId);
-    
+
+    @Query("SELECT c FROM Certificates c LEFT JOIN FETCH c.event LEFT JOIN FETCH c.user WHERE c.event.eventId = :eventId")
+    List<Certificates> findByEventEventId(@Param("eventId") UUID eventId);
+
+    @Query("SELECT c FROM Certificates c LEFT JOIN FETCH c.event LEFT JOIN FETCH c.user WHERE c.user.userId = :userId")
+    List<Certificates> findByUserUserId(@Param("userId") UUID userId);
+
     Optional<Certificates> findByEventEventIdAndUserUserId(UUID eventId, UUID userId);
-    
+
     Optional<Certificates> findByCertificateCode(String certificateCode);
-    
-    @Query("SELECT c FROM Certificates c WHERE c.event.eventId = :eventId AND c.user.userId = :userId")
+
+    @Query("SELECT c FROM Certificates c LEFT JOIN FETCH c.event LEFT JOIN FETCH c.user WHERE c.event.eventId = :eventId AND c.user.userId = :userId")
     Optional<Certificates> findCertificateByEventAndUser(@Param("eventId") UUID eventId, @Param("userId") UUID userId);
-    
+
     boolean existsByEventEventIdAndUserUserId(UUID eventId, UUID userId);
-    
+
     boolean existsByCertificateCode(String certificateCode);
 }

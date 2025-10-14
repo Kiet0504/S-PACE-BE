@@ -28,7 +28,7 @@ public class EventRegistration {
     @Column(name = "event_registration_id")
     UUID eventRegistrationId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "event_id", referencedColumnName = "event_id", nullable = false)
     Event event;
 
