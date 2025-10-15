@@ -45,4 +45,7 @@ public class Certificates {
 
     @Column(length = 255)
     String issuedBy;
+
+    @jakarta.persistence.Transient
+    String certificatePresignedUrl;
 }

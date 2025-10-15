@@ -62,5 +62,29 @@ public interface CloudStorageService {
      * @return File size in bytes, or -1 if file doesn't exist
      */
     long getFileSize(String fileUrl);
+
+    /**
+     * Generate pre-signed URL for secure file access
+     * @param s3Key The S3 object key (not full URL)
+     * @param expirationMinutes URL expiration time in minutes
+     * @return Pre-signed URL valid for specified duration
+     */
+    String generatePresignedUrl(String s3Key, int expirationMinutes);
+
+    /**
+     * Generate pre-signed URL with default 60 minutes expiration
+     * @param s3Key The S3 object key (not full URL)
+     * @return Pre-signed URL valid for 60 minutes
+     */
+    String generatePresignedUrl(String s3Key);
+
+    /**
+     * Upload certificate and return S3 key (not full URL)
+     * @param file The certificate file to upload
+     * @param userId The user ID
+     * @return The S3 key of the uploaded file
+     * @throws IOException if upload fails
+     */
+    String uploadCertificateReturnKey(MultipartFile file, UUID userId) throws IOException;
 }
 

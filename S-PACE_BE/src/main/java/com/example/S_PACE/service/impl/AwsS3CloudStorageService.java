@@ -11,9 +11,13 @@ import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.*;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
+import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 
 import java.io.IOException;
 import java.net.URL;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -29,6 +33,9 @@ public class AwsS3CloudStorageService implements CloudStorageService {
 
     @Autowired
     private S3Client s3Client;
+
+    @Autowired
+    private S3Presigner s3Presigner;
 
     @Value("${aws.s3.bucket-name}")
     private String bucketName;
@@ -261,6 +268,82 @@ public class AwsS3CloudStorageService implements CloudStorageService {
             return "";
         }
         return filename.substring(filename.lastIndexOf('.'));
+    }
+
+    @Override
+    public String generatePresignedUrl(String s3Key, int expirationMinutes) {
+        if (s3Key == null || s3Key.isEmpty()) {
+            logger.warn("Cannot generate pre-signed URL for null or empty S3 key");
+            return null;
+        }
+
+        try {
+            logger.info("Generating pre-signed URL for key: {} with expiration: {} minutes", s3Key, expirationMinutes);
+
+            GetObjectRequest getObjectRequest = GetObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(s3Key)
+                    .build();
+
+            GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
+                    .signatureDuration(Duration.ofMinutes(expirationMinutes))
+                    .getObjectRequest(getObjectRequest)
+                    .build();
+
+            PresignedGetObjectRequest presignedRequest = s3Presigner.presignGetObject(presignRequest);
+            String presignedUrl = presignedRequest.url().toString();
+
+            logger.info("Pre-signed URL generated successfully for key: {}", s3Key);
+            return presignedUrl;
+
+        } catch (Exception e) {
+            logger.error("Failed to generate pre-signed URL for key: {}", s3Key, e);
+            return null;
+        }
+    }
+
+    @Override
+    public String generatePresignedUrl(String s3Key) {
+        return generatePresignedUrl(s3Key, 60);
+    }
+
+    @Override
+    public String uploadCertificateReturnKey(MultipartFile file, UUID userId) throws IOException {
+        logger.info("Uploading certificate to S3 for user: {} (returning S3 key)", userId);
+
+        List<String> allowedTypes = new ArrayList<>(ALLOWED_IMAGE_TYPES);
+        allowedTypes.addAll(ALLOWED_DOCUMENT_TYPES);
+        validateFile(file, allowedTypes, "certificate");
+
+        String key = generateFileKey("certificates", userId, file.getOriginalFilename());
+
+        uploadFileToS3(file, key);
+
+        logger.info("Certificate uploaded successfully with key: {}", key);
+        return key;
+    }
+
+    private void uploadFileToS3(MultipartFile file, String key) throws IOException {
+        try {
+            String contentType = file.getContentType();
+            if (contentType == null) {
+                contentType = "application/octet-stream";
+            }
+
+            PutObjectRequest putRequest = PutObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(key)
+                    .contentType(contentType)
+                    .contentLength(file.getSize())
+                    .build();
+
+            s3Client.putObject(putRequest, RequestBody.fromInputStream(file.getInputStream(), file.getSize()));
+            logger.info("File uploaded successfully to S3 with key: {}", key);
+
+        } catch (Exception e) {
+            logger.error("Failed to upload file to S3: {}", e.getMessage(), e);
+            throw new IOException("Failed to upload file to S3", e);
+        }
     }
 }
 

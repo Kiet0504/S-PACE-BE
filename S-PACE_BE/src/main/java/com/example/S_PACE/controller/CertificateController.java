@@ -43,6 +43,9 @@ public class CertificateController {
     @Autowired
     private FileUploadService fileUploadService;
 
+    @Autowired(required = false)
+    private com.example.S_PACE.service.CloudStorageService cloudStorageService;
+
     @Autowired
     private JwtTokenProvider jwtTokenProvider;
 
@@ -71,8 +74,13 @@ public class CertificateController {
             String filePath = null;
             if (certificateFile != null && !certificateFile.isEmpty()) {
                 logger.info("Uploading certificate file");
-                filePath = fileUploadService.uploadCertificate(certificateFile, userId);
-                logger.info("Certificate file uploaded: {}", filePath);
+                if (cloudStorageService != null) {
+                    filePath = cloudStorageService.uploadCertificateReturnKey(certificateFile, userId);
+                    logger.info("Certificate file uploaded to S3 with key: {}", filePath);
+                } else {
+                    filePath = fileUploadService.uploadCertificate(certificateFile, userId);
+                    logger.info("Certificate file uploaded: {}", filePath);
+                }
             }
 
             CertificateRequest request = new CertificateRequest();
@@ -246,8 +254,13 @@ public class CertificateController {
             String filePath = null;
             if (certificateFile != null && !certificateFile.isEmpty()) {
                 logger.info("Uploading new certificate file");
-                filePath = fileUploadService.uploadCertificate(certificateFile, userId);
-                logger.info("Certificate file uploaded: {}", filePath);
+                if (cloudStorageService != null) {
+                    filePath = cloudStorageService.uploadCertificateReturnKey(certificateFile, userId);
+                    logger.info("Certificate file uploaded to S3 with key: {}", filePath);
+                } else {
+                    filePath = fileUploadService.uploadCertificate(certificateFile, userId);
+                    logger.info("Certificate file uploaded: {}", filePath);
+                }
             }
 
             CertificateRequest request = new CertificateRequest();
@@ -343,23 +356,30 @@ public class CertificateController {
 
     private CertificateResponse convertToResponse(Certificates certificate) {
         try {
+            String fileUrl = certificate.getCertificatePresignedUrl() != null
+                ? certificate.getCertificatePresignedUrl()
+                : certificate.getCertificateFilePath();
+
             return CertificateResponse.builder()
                 .certificatesId(certificate.getCertificatesId())
                 .eventId(certificate.getEvent() != null ? certificate.getEvent().getEventId() : null)
                 .eventName(certificate.getEvent() != null ? certificate.getEvent().getTitle() : null)
                 .userId(certificate.getUser() != null ? certificate.getUser().getUserId() : null)
                 .userName(certificate.getUser() != null ? certificate.getUser().getFullName() : null)
-                .certificateFilePath(certificate.getCertificateFilePath())
+                .certificateFilePath(fileUrl)
                 .certificateCode(certificate.getCertificateCode())
                 .issuedDate(certificate.getIssuedDate())
                 .issuedBy(certificate.getIssuedBy())
                 .build();
         } catch (Exception ex) {
             logger.error("Error converting certificate to response: {}", ex.getMessage(), ex);
-            // Return basic info if lazy loading fails
+            String fileUrl = certificate.getCertificatePresignedUrl() != null
+                ? certificate.getCertificatePresignedUrl()
+                : certificate.getCertificateFilePath();
+
             return CertificateResponse.builder()
                 .certificatesId(certificate.getCertificatesId())
-                .certificateFilePath(certificate.getCertificateFilePath())
+                .certificateFilePath(fileUrl)
                 .certificateCode(certificate.getCertificateCode())
                 .issuedDate(certificate.getIssuedDate())
                 .issuedBy(certificate.getIssuedBy())

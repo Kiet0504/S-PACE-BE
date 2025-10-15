@@ -8,6 +8,7 @@ import com.example.S_PACE.repository.CertificateRepository;
 import com.example.S_PACE.repository.EventRepository;
 import com.example.S_PACE.repository.UserRepository;
 import com.example.S_PACE.service.CertificateService;
+import com.example.S_PACE.service.CloudStorageService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,6 +32,9 @@ public class CertificateServiceImpl implements CertificateService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired(required = false)
+    private CloudStorageService cloudStorageService;
 
     @Override
     public Certificates createCertificate(CertificateRequest request, String filePath) {
@@ -73,30 +77,38 @@ public class CertificateServiceImpl implements CertificateService {
     @Transactional(readOnly = true)
     public Certificates getCertificateById(UUID certificateId) {
         logger.info("Fetching certificate by ID: {}", certificateId);
-        return certificateRepository.findById(certificateId)
+        Certificates certificate = certificateRepository.findById(certificateId)
                 .orElseThrow(() -> new IllegalArgumentException("Certificate not found with ID: " + certificateId));
+        populatePresignedUrl(certificate);
+        return certificate;
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<Certificates> getCertificatesByEvent(UUID eventId) {
         logger.info("Fetching certificates for event: {}", eventId);
-        return certificateRepository.findByEventEventId(eventId);
+        List<Certificates> certificates = certificateRepository.findByEventEventId(eventId);
+        certificates.forEach(this::populatePresignedUrl);
+        return certificates;
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<Certificates> getCertificatesByUser(UUID userId) {
         logger.info("Fetching certificates for user: {}", userId);
-        return certificateRepository.findByUserUserId(userId);
+        List<Certificates> certificates = certificateRepository.findByUserUserId(userId);
+        certificates.forEach(this::populatePresignedUrl);
+        return certificates;
     }
 
     @Override
     @Transactional(readOnly = true)
     public Certificates getCertificateByEventAndUser(UUID eventId, UUID userId) {
         logger.info("Fetching certificate for user: {} in event: {}", userId, eventId);
-        return certificateRepository.findCertificateByEventAndUser(eventId, userId)
+        Certificates certificate = certificateRepository.findCertificateByEventAndUser(eventId, userId)
                 .orElseThrow(() -> new IllegalArgumentException("Certificate not found for user in this event"));
+        populatePresignedUrl(certificate);
+        return certificate;
     }
 
     @Override
@@ -141,5 +153,48 @@ public class CertificateServiceImpl implements CertificateService {
     @Transactional(readOnly = true)
     public boolean existsByCertificateCode(String certificateCode) {
         return certificateRepository.existsByCertificateCode(certificateCode);
+    }
+
+    private void populatePresignedUrl(Certificates certificate) {
+        if (certificate == null) {
+            return;
+        }
+
+        String filePath = certificate.getCertificateFilePath();
+        if (filePath != null && !filePath.isEmpty() && cloudStorageService != null) {
+            try {
+                if (filePath.startsWith("http://") || filePath.startsWith("https://")) {
+                    String s3Key = extractS3KeyFromUrl(filePath);
+                    String presignedUrl = cloudStorageService.generatePresignedUrl(s3Key);
+                    certificate.setCertificatePresignedUrl(presignedUrl);
+                } else {
+                    String presignedUrl = cloudStorageService.generatePresignedUrl(filePath);
+                    certificate.setCertificatePresignedUrl(presignedUrl);
+                }
+                logger.debug("Generated pre-signed URL for certificate: {}", certificate.getCertificatesId());
+            } catch (Exception e) {
+                logger.warn("Failed to generate pre-signed URL for certificate {}: {}",
+                    certificate.getCertificatesId(), e.getMessage());
+                certificate.setCertificatePresignedUrl(filePath);
+            }
+        }
+    }
+
+    private String extractS3KeyFromUrl(String url) {
+        try {
+            if (url.contains(".s3.amazonaws.com/")) {
+                return url.substring(url.indexOf(".s3.amazonaws.com/") + 18);
+            } else if (url.contains("s3.amazonaws.com/")) {
+                String[] parts = url.split("s3.amazonaws.com/");
+                if (parts.length > 1) {
+                    String[] keyParts = parts[1].split("/", 2);
+                    return keyParts.length > 1 ? keyParts[1] : parts[1];
+                }
+            }
+            return url;
+        } catch (Exception e) {
+            logger.error("Failed to extract S3 key from URL: {}", url, e);
+            return url;
+        }
     }
 }
