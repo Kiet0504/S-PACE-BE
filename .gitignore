@@ -91,3 +91,4 @@ test-results/
 coverage/
 surefire-reports/
 failsafe-reports/
+S-PACE_BE/target/maven-status/maven-compiler-plugin/compile/default-compile/inputFiles.lst
