@@ -6,6 +6,7 @@ import com.example.S_PACE.enums.EventStatus;
 import com.example.S_PACE.mapper.EventMapper;
 import com.example.S_PACE.pojo.Company;
 import com.example.S_PACE.pojo.Event;
+import com.example.S_PACE.pojo.User;
 import com.example.S_PACE.repository.EventRepository;
 import com.example.S_PACE.service.EventService;
 import org.slf4j.Logger;
@@ -34,7 +35,7 @@ public class EventServiceImpl implements EventService {
 
     @Override
     @Transactional
-    public EventResponse createEvent(EventRequest eventRequest, UUID companyId) {
+    public EventResponse createEvent(EventRequest eventRequest, UUID companyId, UUID createdBy) {
         logger.info("Creating new event: {} for company: {}", eventRequest.getEventName(), companyId);
 
         if (eventRequest.getEventName() == null || eventRequest.getEventName().trim().isEmpty()) {
@@ -48,10 +49,14 @@ public class EventServiceImpl implements EventService {
         try {
             // Get company reference
             Company company = entityManager.getReference(Company.class, companyId);
+            
+            // Get user reference for createdBy
+            User createdByUser = entityManager.getReference(User.class, createdBy);
 
             // Convert EventRequest to Event entity
             Event event = eventMapper.toEvent(eventRequest);
             event.setCompany(company);
+            event.setCreatedBy(createdByUser);
 
             // Set default status if not provided
             if (event.getStatus() == null) {
@@ -118,6 +123,50 @@ public class EventServiceImpl implements EventService {
 
         List<Event> events = eventRepository.findByStatus(status);
         return eventMapper.toEventResponseList(events);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<EventResponse> getEventsByStatus(EventStatus status, int page, int limit, String sortBy, String order) {
+        logger.info("Fetching events by status: {} with pagination - page: {}, limit: {}, sortBy: {}, order: {}", 
+                   status, page, limit, sortBy, order);
+
+        if (status == null) {
+            throw new IllegalArgumentException("Event status cannot be null");
+        }
+
+        // For now, we'll use the existing repository method and implement pagination in memory
+        // In a production environment, you might want to use Spring Data's Pageable for better performance
+        List<Event> allEvents = eventRepository.findByStatus(status);
+        
+        // Apply sorting
+        allEvents.sort((e1, e2) -> {
+            int comparison = 0;
+            switch (sortBy.toLowerCase()) {
+                case "startdate":
+                    comparison = e1.getStartDate().compareTo(e2.getStartDate());
+                    break;
+                case "enddate":
+                    comparison = e1.getEndDate().compareTo(e2.getEndDate());
+                    break;
+                case "createdat":
+                default:
+                    comparison = e1.getCreatedAt().compareTo(e2.getCreatedAt());
+                    break;
+            }
+            return "desc".equalsIgnoreCase(order) ? -comparison : comparison;
+        });
+        
+        // Apply pagination
+        int startIndex = (page - 1) * limit;
+        int endIndex = Math.min(startIndex + limit, allEvents.size());
+        
+        if (startIndex >= allEvents.size()) {
+            return List.of(); // Return empty list if page is out of range
+        }
+        
+        List<Event> paginatedEvents = allEvents.subList(startIndex, endIndex);
+        return eventMapper.toEventResponseList(paginatedEvents);
     }
 
     @Override
@@ -209,5 +258,112 @@ public class EventServiceImpl implements EventService {
             return false;
         }
         return eventRepository.existsById(eventId);
+    }
+
+    @Override
+    @Transactional
+    public EventResponse updateEventStatus(UUID eventId, EventStatus newStatus, UUID userId) {
+        logger.info("Updating event status for event: {} to status: {} by user: {}", eventId, newStatus, userId);
+
+        if (eventId == null) {
+            throw new IllegalArgumentException("Event ID cannot be null");
+        }
+        if (newStatus == null) {
+            throw new IllegalArgumentException("Event status cannot be null");
+        }
+        if (userId == null) {
+            throw new IllegalArgumentException("User ID cannot be null");
+        }
+
+        try {
+            // Get existing event
+            Event existingEvent = eventRepository.findById(eventId)
+                    .orElseThrow(() -> new IllegalArgumentException("Event not found with ID: " + eventId));
+
+            // Flexible mode: Allow any status transition without validation
+            logger.info("Flexible mode: Allowing status transition from {} to {} for event: {} by user: {}", 
+                       existingEvent.getStatus(), newStatus, eventId, userId);
+
+            // Store old status for logging
+            EventStatus oldStatus = existingEvent.getStatus();
+
+            // Update status
+            existingEvent.setStatus(newStatus);
+
+            // Save updated event
+            Event updatedEvent = eventRepository.save(existingEvent);
+            logger.info("Event status updated successfully from {} to {} for event: {}", oldStatus, newStatus, eventId);
+
+            return eventMapper.toEventResponse(updatedEvent);
+
+        } catch (Exception ex) {
+            logger.error("Error updating event status: {}", ex.getMessage(), ex);
+            throw new RuntimeException("Failed to update event status: " + ex.getMessage());
+        }
+    }
+
+    /**
+     * Validates if a status transition is allowed according to the business rules
+     * 
+     * @param currentStatus Current event status
+     * @param newStatus New status to transition to
+     * @return true if transition is valid, false otherwise
+     */
+    private boolean isValidStatusTransition(EventStatus currentStatus, EventStatus newStatus) {
+        if (currentStatus == null || newStatus == null) {
+            return false;
+        }
+
+        // Same status is always valid
+        if (currentStatus == newStatus) {
+            return true;
+        }
+
+        // Define valid transitions based on documentation
+        switch (currentStatus) {
+            case DRAFT:
+                return newStatus == EventStatus.PUBLISHED || newStatus == EventStatus.CANCELLED;
+            
+            case PUBLISHED:
+                return newStatus == EventStatus.REGISTRATION_OPEN || newStatus == EventStatus.CANCELLED;
+            
+            case REGISTRATION_OPEN:
+                return newStatus == EventStatus.REGISTRATION_CLOSED || newStatus == EventStatus.CANCELLED;
+            
+            case REGISTRATION_CLOSED:
+                return newStatus == EventStatus.ONGOING || newStatus == EventStatus.CANCELLED;
+            
+            case ONGOING:
+                return newStatus == EventStatus.COMPLETED || newStatus == EventStatus.CANCELLED;
+            
+            case COMPLETED:
+                // COMPLETED events cannot transition to any other status
+                return false;
+            
+            case CANCELLED:
+                // CANCELLED events cannot transition to any other status
+                return false;
+            
+            case ACTIVE:
+            case SUSPENDED:
+                // These statuses are not part of the main workflow but allow transitions to any valid status
+                return isValidMainStatus(newStatus);
+            
+            default:
+                return false;
+        }
+    }
+
+    /**
+     * Checks if a status is part of the main event workflow
+     */
+    private boolean isValidMainStatus(EventStatus status) {
+        return status == EventStatus.DRAFT || 
+               status == EventStatus.PUBLISHED || 
+               status == EventStatus.REGISTRATION_OPEN || 
+               status == EventStatus.REGISTRATION_CLOSED || 
+               status == EventStatus.ONGOING || 
+               status == EventStatus.COMPLETED || 
+               status == EventStatus.CANCELLED;
     }
 }

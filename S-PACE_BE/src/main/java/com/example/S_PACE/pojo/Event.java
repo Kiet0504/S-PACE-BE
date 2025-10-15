@@ -52,6 +52,10 @@ public class Event {
     @Column(name = "created_at", updatable = false)
     LocalDateTime createdAt;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_by", referencedColumnName = "user_id", nullable = false)
+    User createdBy;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     EventStatus status;

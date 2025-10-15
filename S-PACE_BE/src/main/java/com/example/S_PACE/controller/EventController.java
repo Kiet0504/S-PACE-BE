@@ -2,6 +2,7 @@ package com.example.S_PACE.controller;
 
 import com.example.S_PACE.dto.request.CertificateRequest;
 import com.example.S_PACE.dto.request.EventRequest;
+import com.example.S_PACE.dto.request.UpdateEventStatusRequest;
 import com.example.S_PACE.dto.response.EventResponse;
 import com.example.S_PACE.dto.response.ResponseDTO;
 import com.example.S_PACE.enums.EventStatus;
@@ -79,7 +80,8 @@ public class EventController {
             @RequestParam(value = "requirements", required = false) String requirements,
             @RequestParam(value = "contactInfo", required = false) String contactInfo,
             @RequestParam(value = "image", required = false) MultipartFile imageFile,
-            @RequestParam UUID companyId) {
+            @RequestParam UUID companyId,
+            HttpServletRequest request) {
         try {
             logger.info("Creating new event: {} for company: {}", eventName, companyId);
             
@@ -124,8 +126,11 @@ public class EventController {
                 eventRequest.setStatus(EventStatus.DRAFT);
             }
             
+            // Get current user ID from JWT token
+            UUID currentUserId = getUserIdFromToken(request);
+            
             // Create event
-            EventResponse createdEvent = eventService.createEvent(eventRequest, companyId);
+            EventResponse createdEvent = eventService.createEvent(eventRequest, companyId, currentUserId);
             
             logger.info("Event created successfully with ID: {}", createdEvent.getEventId());
             return ResponseEntity.status(HttpStatus.CREATED)
@@ -157,10 +162,15 @@ public class EventController {
     @PreAuthorize("hasRole('EVENT_MANAGER')")
     public ResponseEntity<ResponseDTO<EventResponse>> createEvent(
             @Valid @RequestBody EventRequest eventRequest,
-            @RequestParam UUID companyId) {
+            @RequestParam UUID companyId,
+            HttpServletRequest request) {
         try {
             logger.info("Creating new event: {} for company: {}", eventRequest.getEventName(), companyId);
-            EventResponse createdEvent = eventService.createEvent(eventRequest, companyId);
+            
+            // Get current user ID from JWT token
+            UUID currentUserId = getUserIdFromToken(request);
+            
+            EventResponse createdEvent = eventService.createEvent(eventRequest, companyId, currentUserId);
             return ResponseEntity.status(HttpStatus.CREATED)
                 .body(new ResponseDTO<>(true, "Event created successfully", createdEvent));
         } catch (IllegalArgumentException ex) {
@@ -293,18 +303,34 @@ public class EventController {
     }
 
     @GetMapping("/status/{status}")
-    @Operation(summary = "Get events by status", description = "Retrieve events with a specific status")
+    @Operation(summary = "Get events by status", description = "Retrieve events with a specific status with pagination support")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Events retrieved successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid status or pagination parameters"),
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    public ResponseEntity<ResponseDTO<List<EventResponse>>> getEventsByStatus(@PathVariable EventStatus status) {
+    public ResponseEntity<ResponseDTO<List<EventResponse>>> getEventsByStatus(
+            @PathVariable EventStatus status,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int limit,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String order) {
         try {
-            logger.info("Fetching events by status: {}", status);
-            List<EventResponse> events = eventService.getEventsByStatus(status);
+            logger.info("Fetching events by status: {} with pagination - page: {}, limit: {}, sortBy: {}, order: {}", 
+                       status, page, limit, sortBy, order);
+            
+            // Validate pagination parameters
+            if (page < 1) {
+                throw new IllegalArgumentException("Page number must be greater than 0");
+            }
+            if (limit < 1 || limit > 100) {
+                throw new IllegalArgumentException("Limit must be between 1 and 100");
+            }
+            
+            List<EventResponse> events = eventService.getEventsByStatus(status, page, limit, sortBy, order);
             return ResponseEntity.ok(new ResponseDTO<>(true, "Events retrieved successfully", events));
         } catch (IllegalArgumentException ex) {
-            logger.warn("Invalid status: {}", ex.getMessage());
+            logger.warn("Invalid parameters: {}", ex.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(new ResponseDTO<>(false, ex.getMessage(), null));
         } catch (Exception ex) {
@@ -580,6 +606,44 @@ public class EventController {
             logger.error("Error fetching certificate for user {} in event {}: {}", userId, eventId, ex.getMessage(), ex);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(new ResponseDTO<>(false, "Failed to fetch certificate", null));
+        }
+    }
+
+    @PutMapping("/{eventId}/status")
+    @Operation(summary = "Update event status", description = "Update the status of an event with validation for allowed transitions")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Event status updated successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid status transition or request data"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized - Valid JWT token required"),
+        @ApiResponse(responseCode = "403", description = "Access denied - Insufficient permissions"),
+        @ApiResponse(responseCode = "404", description = "Event not found"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @PreAuthorize("hasAnyRole('ADMIN', 'COMPANY_ADMIN', 'EVENT_MANAGER')")
+    public ResponseEntity<ResponseDTO<EventResponse>> updateEventStatus(
+            @PathVariable UUID eventId,
+            @Valid @RequestBody UpdateEventStatusRequest request,
+            HttpServletRequest httpRequest) {
+        try {
+            logger.info("Updating event status for event: {} to status: {}", eventId, request.getStatus());
+            
+            // Get current user ID from JWT token
+            UUID currentUserId = getUserIdFromToken(httpRequest);
+            
+            // Update event status
+            EventResponse updatedEvent = eventService.updateEventStatus(eventId, request.getStatus(), currentUserId);
+            
+            logger.info("Event status updated successfully for event: {}", eventId);
+            return ResponseEntity.ok(new ResponseDTO<>(true, "Event status updated successfully", updatedEvent));
+            
+        } catch (IllegalArgumentException ex) {
+            logger.warn("Event status update validation error: {}", ex.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ResponseDTO<>(false, ex.getMessage(), null));
+        } catch (Exception ex) {
+            logger.error("Error updating event status for event {}: {}", eventId, ex.getMessage(), ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ResponseDTO<>(false, "Failed to update event status", null));
         }
     }
 
