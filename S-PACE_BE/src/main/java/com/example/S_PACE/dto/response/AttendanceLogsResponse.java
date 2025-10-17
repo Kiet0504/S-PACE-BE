@@ -1,6 +1,7 @@
 package com.example.S_PACE.dto.response;
 
 import com.example.S_PACE.enums.AttendanceStatus;
+import com.example.S_PACE.enums.ParticipationStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -23,4 +24,5 @@ public class AttendanceLogsResponse {
     private LocalDateTime checkInTime;
     private LocalDateTime checkOutTime;
     private AttendanceStatus status;
+    private ParticipationStatus participationStatus;
 }

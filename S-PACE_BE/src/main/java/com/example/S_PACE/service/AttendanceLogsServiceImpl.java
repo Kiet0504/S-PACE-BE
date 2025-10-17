@@ -47,6 +47,7 @@ public class AttendanceLogsServiceImpl implements AttendanceLogsService {
         attendanceLog.setCheckInTime(request.getCheckInTime());
         attendanceLog.setCheckOutTime(request.getCheckOutTime());
         attendanceLog.setStatus(request.getStatus());
+        attendanceLog.setParticipationStatus(request.getParticipationStatus());
 
         AttendanceLogs savedLog = attendanceLogsRepository.save(attendanceLog);
         return mapToResponse(savedLog);
@@ -124,6 +125,10 @@ public class AttendanceLogsServiceImpl implements AttendanceLogsService {
             attendanceLog.setStatus(request.getStatus());
         }
 
+        if (request.getParticipationStatus() != null) {
+            attendanceLog.setParticipationStatus(request.getParticipationStatus());
+        }
+
         AttendanceLogs updatedLog = attendanceLogsRepository.save(attendanceLog);
         return mapToResponse(updatedLog);
     }
@@ -157,6 +162,7 @@ public class AttendanceLogsServiceImpl implements AttendanceLogsService {
         attendanceLog.setUser(user);
         attendanceLog.setCheckInTime(LocalDateTime.now());
         attendanceLog.setStatus(AttendanceStatus.CHECKED_IN);
+        attendanceLog.setParticipationStatus(com.example.S_PACE.enums.ParticipationStatus.NOT_ATTENDED);
 
         AttendanceLogs savedLog = attendanceLogsRepository.save(attendanceLog);
         return mapToResponse(savedLog);
@@ -190,6 +196,7 @@ public class AttendanceLogsServiceImpl implements AttendanceLogsService {
                 .checkInTime(attendanceLog.getCheckInTime())
                 .checkOutTime(attendanceLog.getCheckOutTime())
                 .status(attendanceLog.getStatus())
+                .participationStatus(attendanceLog.getParticipationStatus())
                 .build();
     }
 }

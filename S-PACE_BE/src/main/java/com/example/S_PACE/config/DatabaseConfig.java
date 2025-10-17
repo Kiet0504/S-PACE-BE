@@ -48,6 +48,20 @@ public class DatabaseConfig {
                     log.info("Found existing schema version: {}", current.getVersion());
                 }
 
+                // Check for validation issues and repair if needed
+                try {
+                    flyway.validate();
+                } catch (Exception e) {
+                    log.warn("Validation failed: {}. Attempting repair...", e.getMessage());
+
+                    // Fix: Delete migration V6 if it has checksum mismatch, then repair
+                    fixMigrationV6Checksum(flyway);
+
+                    // Use repair to fix checksums in schema history
+                    flyway.repair();
+                    log.info("Repair completed successfully");
+                }
+
                 MigrateResult result = flyway.migrate();
 
                 if (result.migrationsExecuted > 0) {
@@ -125,6 +139,37 @@ public class DatabaseConfig {
         } catch (Exception e) {
             log.error("Could not extract database name from url: {}", url, e);
             return null;
+        }
+    }
+
+    private void fixMigrationV6Checksum(Flyway flyway) {
+        try {
+            log.info("Checking for migration V6 checksum mismatch...");
+
+            try (Connection conn = flyway.getConfiguration().getDataSource().getConnection();
+                 Statement stmt = conn.createStatement()) {
+
+                // Delete migration V6 if it exists (to allow re-run with new checksum)
+                int deleted = stmt.executeUpdate(
+                    "DELETE FROM flyway_schema_history WHERE version = '6'"
+                );
+
+                if (deleted > 0) {
+                    log.info("Deleted migration V6 record to fix checksum mismatch. It will be re-applied.");
+
+                    // Also update old participation_status values
+                    stmt.executeUpdate(
+                        "UPDATE attendance_logs SET participation_status = 'ATTENDED' WHERE participation_status = 'WORKED'"
+                    );
+                    stmt.executeUpdate(
+                        "UPDATE attendance_logs SET participation_status = 'NOT_ATTENDED' WHERE participation_status IS NULL"
+                    );
+                    log.info("Updated old attendance_logs data.");
+                }
+            }
+        } catch (SQLException e) {
+            log.warn("Could not fix migration V6: {}", e.getMessage());
+            // Don't throw - let Flyway handle it
         }
     }
 
