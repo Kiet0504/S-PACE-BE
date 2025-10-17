@@ -105,6 +105,11 @@ jwt:
   expiration: ${JWT_EXPIRATION:86400000}
   refresh-token-expiration: ${JWT_REFRESH_EXPIRATION:604800000}
 
+payos:
+  client-id: ${PAYOS_CLIENT_ID:e370ec77-6573-4fbb-951a-75f21d0d5339}
+  api-key: ${PAYOS_API_KEY:0734a1ad-6a0f-4cb7-b23b-b7a6458c001e}
+  checksum-key: ${PAYOS_CHECKSUM_KEY:5ef46132587dac428abe9d10d0bf91a3f90c0239f332b2adbabe759293bfec4e}
+
 file:
   upload-dir: ${FILE_UPLOAD_DIR:./uploads}
   upload:
@@ -150,6 +155,10 @@ app:
 logging:
   level:
     com.example.S_PACE: ${LOG_LEVEL:INFO}
+    com.example.S_PACE.controller.PaymentController: DEBUG
+    com.example.S_PACE.controller.PaymentWebhookController: DEBUG
+    com.example.S_PACE.service.PaymentService: DEBUG
+    com.example.S_PACE.service.SubscriptionService: DEBUG
     org.springframework.security: ${SECURITY_LOG_LEVEL:WARN}
     org.flywaydb: INFO
     org.hibernate.SQL: ${SQL_LOG_LEVEL:WARN}
