@@ -1,6 +1,7 @@
 package com.example.S_PACE.pojo;
 
 import com.example.S_PACE.enums.AttendanceStatus;
+import com.example.S_PACE.enums.ParticipationStatus;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
@@ -30,7 +31,6 @@ public class AttendanceLogs {
     @JoinColumn(name = "user_id", referencedColumnName = "user_id", nullable = false)
     User user;
 
-    @Column(nullable = false)
     LocalDateTime checkInTime;
 
     LocalDateTime checkOutTime;
@@ -38,4 +38,8 @@ public class AttendanceLogs {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     AttendanceStatus status;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "participation_status", nullable = false)
+    ParticipationStatus participationStatus;
 }

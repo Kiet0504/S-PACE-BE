@@ -1,6 +1,7 @@
 package com.example.S_PACE.dto.request;
 
 import com.example.S_PACE.enums.AttendanceStatus;
+import com.example.S_PACE.enums.ParticipationStatus;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -13,4 +14,5 @@ public class AttendanceLogsRequest {
     private LocalDateTime checkInTime;
     private LocalDateTime checkOutTime;
     private AttendanceStatus status;
+    private ParticipationStatus participationStatus;
 }
