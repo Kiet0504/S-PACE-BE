@@ -20,7 +20,8 @@ import java.util.UUID;
 public class Rating {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
+    @GeneratedValue(generator = "UUID")
+    @GenericGenerator(name = "UUID", strategy = "org.hibernate.id.UUIDGenerator")
     @Column(name = "rating_id")
     UUID ratingId;
 
@@ -36,7 +37,7 @@ public class Rating {
     @JoinColumn(name = "rated_by", referencedColumnName = "user_id", nullable = false)
     User ratedBy;
 
-    @Column(name = "rating_score", nullable = false, precision = 3, scale = 2)
+    @Column(name = "rating_score", nullable = false, precision = 3, scale = 2, insertable = false, updatable = false)
     BigDecimal ratingScore;
 
     @Column(name = "rating_comment", columnDefinition = "TEXT")

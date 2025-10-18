@@ -14,3 +14,4 @@ public class UpdateEventStatusRequest {
     @NotNull(message = "Event status is required")
     private EventStatus status;
 }
+

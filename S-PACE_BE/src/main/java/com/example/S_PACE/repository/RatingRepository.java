@@ -44,17 +44,17 @@ public interface RatingRepository extends JpaRepository<Rating, UUID> {
            "ORDER BY r.ratingDate DESC")
     Page<Rating> findByCollaboratorIdWithDetails(@Param("collaboratorId") UUID collaboratorId, Pageable pageable);
     
-    // Get rating statistics for a collaborator
-    @Query("SELECT AVG(r.ratingScore) FROM Rating r WHERE r.collaborator.userId = :collaboratorId")
+    // Get rating statistics for a collaborator - calculate from 4 detailed scores
+    @Query("SELECT AVG((r.punctualityScore + r.qualityScore + r.attitudeScore + r.teamworkScore) / 4.0) FROM Rating r WHERE r.collaborator.userId = :collaboratorId")
     Double getAverageRatingByCollaboratorId(@Param("collaboratorId") UUID collaboratorId);
     
     @Query("SELECT COUNT(r) FROM Rating r WHERE r.collaborator.userId = :collaboratorId")
     Long getTotalRatingsByCollaboratorId(@Param("collaboratorId") UUID collaboratorId);
     
-    // Get rating distribution
-    @Query("SELECT CAST(r.ratingScore AS int) as score, COUNT(r) as count " +
+    // Get rating distribution - calculate from 4 detailed scores
+    @Query("SELECT CAST(ROUND((r.punctualityScore + r.qualityScore + r.attitudeScore + r.teamworkScore) / 4.0) AS int) as score, COUNT(r) as count " +
            "FROM Rating r WHERE r.collaborator.userId = :collaboratorId " +
-           "GROUP BY CAST(r.ratingScore AS int) " +
+           "GROUP BY CAST(ROUND((r.punctualityScore + r.qualityScore + r.attitudeScore + r.teamworkScore) / 4.0) AS int) " +
            "ORDER BY score DESC")
     List<Object[]> getRatingDistributionByCollaboratorId(@Param("collaboratorId") UUID collaboratorId);
     

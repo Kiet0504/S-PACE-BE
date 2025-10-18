@@ -15,10 +15,7 @@ public class CreateRatingRequest {
     @NotNull(message = "Collaborator ID is required")
     private UUID collaboratorId;
     
-    @NotNull(message = "Rating score is required")
-    @DecimalMin(value = "1.0", message = "Rating score must be at least 1.0")
-    @DecimalMax(value = "5.0", message = "Rating score must be at most 5.0")
-    private BigDecimal ratingScore;
+    // ratingScore is now calculated automatically from the 4 detailed scores
     
     @Size(max = 1000, message = "Rating comment cannot exceed 1000 characters")
     private String ratingComment;
@@ -42,13 +39,12 @@ public class CreateRatingRequest {
     // Constructors
     public CreateRatingRequest() {}
 
-    public CreateRatingRequest(UUID eventId, UUID collaboratorId, BigDecimal ratingScore, 
+    public CreateRatingRequest(UUID eventId, UUID collaboratorId, 
                               String ratingComment, BigDecimal punctualityScore, 
                               BigDecimal qualityScore, BigDecimal attitudeScore, 
                               BigDecimal teamworkScore) {
         this.eventId = eventId;
         this.collaboratorId = collaboratorId;
-        this.ratingScore = ratingScore;
         this.ratingComment = ratingComment;
         this.punctualityScore = punctualityScore;
         this.qualityScore = qualityScore;
@@ -73,13 +69,7 @@ public class CreateRatingRequest {
         this.collaboratorId = collaboratorId;
     }
 
-    public BigDecimal getRatingScore() {
-        return ratingScore;
-    }
-
-    public void setRatingScore(BigDecimal ratingScore) {
-        this.ratingScore = ratingScore;
-    }
+    // ratingScore getter and setter removed - it's now calculated automatically
 
     public String getRatingComment() {
         return ratingComment;
@@ -126,7 +116,6 @@ public class CreateRatingRequest {
         return "CreateRatingRequest{" +
                 "eventId=" + eventId +
                 ", collaboratorId=" + collaboratorId +
-                ", ratingScore=" + ratingScore +
                 ", ratingComment='" + ratingComment + '\'' +
                 ", punctualityScore=" + punctualityScore +
                 ", qualityScore=" + qualityScore +

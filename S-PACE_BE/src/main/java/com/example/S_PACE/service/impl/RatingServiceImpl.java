@@ -6,6 +6,7 @@ import com.example.S_PACE.dto.response.PaginationResponse;
 import com.example.S_PACE.dto.response.RatingListResponse;
 import com.example.S_PACE.dto.response.RatingResponse;
 import com.example.S_PACE.dto.response.RatingSummaryResponse;
+import com.example.S_PACE.enums.EventStatus;
 import com.example.S_PACE.exception.AuthenticationException;
 import com.example.S_PACE.pojo.Event;
 import com.example.S_PACE.pojo.Rating;
@@ -52,7 +53,6 @@ public class RatingServiceImpl implements RatingService {
 
         // Create new rating
         Rating rating = new Rating();
-        rating.setRatingId(UUID.randomUUID());
         
         // Set entity relationships
         Event event = eventRepository.findById(request.getEventId())
@@ -67,7 +67,7 @@ public class RatingServiceImpl implements RatingService {
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
         rating.setRatedBy(ratedByUser);
         
-        rating.setRatingScore(request.getRatingScore());
+        // ratingScore is now calculated automatically by database trigger
         rating.setRatingComment(request.getRatingComment());
         rating.setPunctualityScore(request.getPunctualityScore() != null ? request.getPunctualityScore() : BigDecimal.ZERO);
         rating.setQualityScore(request.getQualityScore() != null ? request.getQualityScore() : BigDecimal.ZERO);
@@ -89,9 +89,7 @@ public class RatingServiceImpl implements RatingService {
         }
 
         // Update fields if provided
-        if (request.getRatingScore() != null) {
-            rating.setRatingScore(request.getRatingScore());
-        }
+        // ratingScore is now calculated automatically by database trigger
         if (request.getRatingComment() != null) {
             rating.setRatingComment(request.getRatingComment());
         }
@@ -234,7 +232,7 @@ public class RatingServiceImpl implements RatingService {
         }
 
         // 2. Check if event status is COMPLETED
-        if (!"COMPLETED".equals(event.getStatus())) {
+        if (!EventStatus.COMPLETED.equals(event.getStatus())) {
             return false;
         }
 
@@ -260,7 +258,7 @@ public class RatingServiceImpl implements RatingService {
         }
 
         // Check if event status is COMPLETED
-        if (!"COMPLETED".equals(event.getStatus())) {
+        if (!EventStatus.COMPLETED.equals(event.getStatus())) {
             throw new IllegalArgumentException("Can only rate for completed events");
         }
 
