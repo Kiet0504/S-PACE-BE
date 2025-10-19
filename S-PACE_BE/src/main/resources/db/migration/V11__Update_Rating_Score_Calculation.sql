@@ -12,16 +12,26 @@ SET rating_score = ROUND(
 WHERE rating_score IS NOT NULL;
 
 -- Add a check constraint to ensure rating_score is calculated correctly
-ALTER TABLE rating 
-ADD CONSTRAINT chk_rating_score_calculation 
-CHECK (
-    rating_score = ROUND(
-        (COALESCE(punctuality_score, 0) + 
-         COALESCE(quality_score, 0) + 
-         COALESCE(attitude_score, 0) + 
-         COALESCE(teamwork_score, 0)) / 4.0, 2
-    )
-);
+-- Only add if it doesn't exist to avoid conflicts
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.table_constraints 
+        WHERE constraint_name = 'chk_rating_score_calculation' 
+        AND table_name = 'rating'
+    ) THEN
+        ALTER TABLE rating 
+        ADD CONSTRAINT chk_rating_score_calculation 
+        CHECK (
+            rating_score = ROUND(
+                (COALESCE(punctuality_score, 0) + 
+                 COALESCE(quality_score, 0) + 
+                 COALESCE(attitude_score, 0) + 
+                 COALESCE(teamwork_score, 0)) / 4.0, 2
+            )
+        );
+    END IF;
+END $$;
 
 -- Update the function to calculate average rating from the 4 detailed scores
 CREATE OR REPLACE FUNCTION update_user_rating_stats(user_uuid UUID)
@@ -66,15 +76,31 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Create trigger for INSERT
-CREATE TRIGGER tr_calculate_rating_score_insert
-    BEFORE INSERT ON rating
-    FOR EACH ROW
-    EXECUTE FUNCTION calculate_rating_score();
+-- Create trigger for INSERT (only if it doesn't exist)
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.triggers 
+        WHERE trigger_name = 'tr_calculate_rating_score_insert'
+    ) THEN
+        CREATE TRIGGER tr_calculate_rating_score_insert
+            BEFORE INSERT ON rating
+            FOR EACH ROW
+            EXECUTE FUNCTION calculate_rating_score();
+    END IF;
+END $$;
 
--- Create trigger for UPDATE
-CREATE TRIGGER tr_calculate_rating_score_update
-    BEFORE UPDATE ON rating
-    FOR EACH ROW
-    EXECUTE FUNCTION calculate_rating_score();
+-- Create trigger for UPDATE (only if it doesn't exist)
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.triggers 
+        WHERE trigger_name = 'tr_calculate_rating_score_update'
+    ) THEN
+        CREATE TRIGGER tr_calculate_rating_score_update
+            BEFORE UPDATE ON rating
+            FOR EACH ROW
+            EXECUTE FUNCTION calculate_rating_score();
+    END IF;
+END $$;
 
