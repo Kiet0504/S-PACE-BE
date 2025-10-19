@@ -47,13 +47,10 @@ public class DatabaseConfig {
                     // Check if database actually has existing tables
                     if (hasExistingTables()) {
                         log.warn("Database appears to have existing tables but no Flyway history. This could cause migration conflicts.");
-                        log.warn("Setting baseline to version 11 to avoid conflicts with existing tables.");
-                        
-                        // Set baseline to the latest version to avoid running old migrations
-                        flyway.baseline("11");
-                    } else {
-                        flyway.baseline();
+                        log.warn("Consider manually cleaning up flyway_schema_history table if needed.");
                     }
+                    
+                    flyway.baseline();
                 } else {
                     log.info("Found existing schema version: {}", current.getVersion());
                 }
@@ -89,15 +86,6 @@ public class DatabaseConfig {
                                 .outOfOrder(true)
                                 .load();
                         result = outOfOrderFlyway.migrate();
-                    } else if (e.getMessage().contains("already exists")) {
-                        log.warn("Migration conflict detected: {}", e.getMessage());
-                        log.warn("Attempting to resolve by marking conflicting migrations as applied...");
-                        
-                        // Try to resolve by marking conflicting migrations as applied
-                        resolveMigrationConflicts(flyway, e.getMessage());
-                        
-                        // Retry migration
-                        result = flyway.migrate();
                     } else {
                         throw e;
                     }
@@ -279,60 +267,6 @@ public class DatabaseConfig {
             log.warn("Could not check for existing tables: {}", e.getMessage());
             return false;
         }
-    }
-
-    private void resolveMigrationConflicts(Flyway flyway, String errorMessage) {
-        try {
-            log.info("Attempting to resolve migration conflicts...");
-
-            try (Connection conn = flyway.getConfiguration().getDataSource().getConnection();
-                 Statement stmt = conn.createStatement()) {
-
-                // Extract migration version from error message
-                String version = extractVersionFromError(errorMessage);
-                if (version != null) {
-                    log.info("Marking migration V{} as applied to resolve conflict...", version);
-                    
-                    // Insert a record for the conflicting migration as if it was already applied
-                    String insertSql = String.format(
-                        "INSERT INTO flyway_schema_history (installed_rank, version, description, type, script, checksum, installed_by, installed_on, execution_time, success) " +
-                        "VALUES (1, '%s', 'Migration conflict resolved', 'SQL', 'V%s__Conflict_Resolved.sql', 0, 'system', NOW(), 0, true)",
-                        version, version
-                    );
-                    
-                    try {
-                        stmt.executeUpdate(insertSql);
-                        log.info("Successfully marked migration V{} as applied", version);
-                    } catch (SQLException e) {
-                        log.warn("Could not mark migration as applied: {}", e.getMessage());
-                    }
-                }
-
-                // Also try to repair any other issues
-                flyway.repair();
-                log.info("Migration conflicts resolved successfully");
-
-            }
-        } catch (SQLException e) {
-            log.warn("Could not resolve migration conflicts: {}", e.getMessage());
-            // Don't throw - let the calling method handle it
-        }
-    }
-
-    private String extractVersionFromError(String errorMessage) {
-        // Extract version from error message like "V1__Initial_Schema.sql"
-        if (errorMessage.contains("V1__")) return "1";
-        if (errorMessage.contains("V2__")) return "2";
-        if (errorMessage.contains("V3__")) return "3";
-        if (errorMessage.contains("V4__")) return "4";
-        if (errorMessage.contains("V5__")) return "5";
-        if (errorMessage.contains("V6__")) return "6";
-        if (errorMessage.contains("V7__")) return "7";
-        if (errorMessage.contains("V8__")) return "8";
-        if (errorMessage.contains("V9__")) return "9";
-        if (errorMessage.contains("V10__")) return "10";
-        if (errorMessage.contains("V11__")) return "11";
-        return null;
     }
 
     private void logMigrationInfo(Flyway flyway) {
