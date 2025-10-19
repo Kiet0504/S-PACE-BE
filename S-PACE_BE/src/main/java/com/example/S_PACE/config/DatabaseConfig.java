@@ -62,24 +62,7 @@ public class DatabaseConfig {
                     log.info("Repair completed successfully");
                 }
 
-                // Handle out-of-order migrations
-                MigrateResult result;
-                try {
-                    result = flyway.migrate();
-                } catch (Exception e) {
-                    if (e.getMessage().contains("outOfOrder=true")) {
-                        log.warn("Out-of-order migration detected. Re-running with outOfOrder=true...");
-                        // Configure Flyway to allow out-of-order migrations
-                        Flyway outOfOrderFlyway = Flyway.configure()
-                                .dataSource(flyway.getConfiguration().getDataSource())
-                                .locations(flyway.getConfiguration().getLocations())
-                                .outOfOrder(true)
-                                .load();
-                        result = outOfOrderFlyway.migrate();
-                    } else {
-                        throw e;
-                    }
-                }
+                MigrateResult result = flyway.migrate();
 
                 if (result.migrationsExecuted > 0) {
                     log.info("Successfully executed {} migration(s)", result.migrationsExecuted);
