@@ -47,13 +47,10 @@ public class DatabaseConfig {
                     // Check if database actually has existing tables
                     if (hasExistingTables()) {
                         log.warn("Database appears to have existing tables but no Flyway history. This could cause migration conflicts.");
-                        log.warn("Running baseline and will handle conflicts during migration.");
+                        log.warn("Setting baseline to version 11 to avoid conflicts with existing tables.");
                         
-                        // Run normal baseline first
-                        flyway.baseline();
-                        
-                        // Then manually mark all existing migrations as applied to avoid conflicts
-                        markExistingMigrationsAsApplied();
+                        // Set baseline to the latest version to avoid running old migrations
+                        flyway.baseline("11");
                     } else {
                         flyway.baseline();
                     }
@@ -318,57 +315,6 @@ public class DatabaseConfig {
             }
         } catch (SQLException e) {
             log.warn("Could not resolve migration conflicts: {}", e.getMessage());
-            // Don't throw - let the calling method handle it
-        }
-    }
-
-    private void markExistingMigrationsAsApplied() {
-        try {
-            log.info("Marking existing migrations as applied to avoid conflicts...");
-
-            Flyway tempFlyway = Flyway.configure()
-                    .dataSource(databaseUrl, username, password)
-                    .load();
-
-            try (Connection conn = tempFlyway.getConfiguration().getDataSource().getConnection();
-                 Statement stmt = conn.createStatement()) {
-
-                // List of all migrations that should be marked as applied
-                String[] migrations = {
-                    "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"
-                };
-
-                for (String version : migrations) {
-                    // Check if migration is not already in history
-                    boolean exists = false;
-                    try (var rs = stmt.executeQuery(
-                        "SELECT 1 FROM flyway_schema_history WHERE version = '" + version + "'")) {
-                        exists = rs.next();
-                    }
-
-                    if (!exists) {
-                        log.info("Marking migration V{} as applied...", version);
-                        
-                        String insertSql = String.format(
-                            "INSERT INTO flyway_schema_history (installed_rank, version, description, type, script, checksum, installed_by, installed_on, execution_time, success) " +
-                            "VALUES (%s, '%s', 'Existing migration marked as applied', 'SQL', 'V%s__Existing.sql', 0, 'system', NOW(), 0, true)",
-                            version, version, version
-                        );
-                        
-                        try {
-                            stmt.executeUpdate(insertSql);
-                            log.info("Successfully marked migration V{} as applied", version);
-                        } catch (SQLException e) {
-                            log.warn("Could not mark migration V{} as applied: {}", version, e.getMessage());
-                        }
-                    }
-                }
-
-                log.info("Finished marking existing migrations as applied");
-
-            }
-        } catch (SQLException e) {
-            log.warn("Could not mark existing migrations as applied: {}", e.getMessage());
             // Don't throw - let the calling method handle it
         }
     }
