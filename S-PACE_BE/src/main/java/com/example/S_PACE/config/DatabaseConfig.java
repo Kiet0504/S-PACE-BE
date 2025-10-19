@@ -43,13 +43,6 @@ public class DatabaseConfig {
 
                 if (current == null) {
                     log.info("Fresh database detected. Running baseline...");
-                    
-                    // Check if database actually has existing tables
-                    if (hasExistingTables()) {
-                        log.warn("Database appears to have existing tables but no Flyway history. This could cause migration conflicts.");
-                        log.warn("Consider manually cleaning up flyway_schema_history table if needed.");
-                    }
-                    
                     flyway.baseline();
                 } else {
                     log.info("Found existing schema version: {}", current.getVersion());
@@ -63,9 +56,6 @@ public class DatabaseConfig {
 
                     // Fix: Delete migration V6 if it has checksum mismatch, then repair
                     fixMigrationV6Checksum(flyway);
-
-                    // Fix: Handle missing schema history entries
-                    fixMissingSchemaHistory(flyway);
 
                     // Use repair to fix checksums in schema history
                     flyway.repair();
@@ -197,75 +187,6 @@ public class DatabaseConfig {
         } catch (SQLException e) {
             log.warn("Could not fix migration V6: {}", e.getMessage());
             // Don't throw - let Flyway handle it
-        }
-    }
-
-    private void fixMissingSchemaHistory(Flyway flyway) {
-        try {
-            log.info("Checking for missing schema history entries...");
-
-            try (Connection conn = flyway.getConfiguration().getDataSource().getConnection();
-                 Statement stmt = conn.createStatement()) {
-
-                // Check if flyway_schema_history table exists
-                boolean historyTableExists = false;
-                try (var rs = stmt.executeQuery(
-                    "SELECT 1 FROM information_schema.tables WHERE table_name = 'flyway_schema_history'")) {
-                    historyTableExists = rs.next();
-                }
-
-                if (!historyTableExists) {
-                    log.info("flyway_schema_history table doesn't exist. This might be a fresh database with existing tables.");
-                    return;
-                }
-
-                // Check if we have existing tables but missing history entries
-                boolean hasTables = false;
-                try (var rs = stmt.executeQuery(
-                    "SELECT 1 FROM information_schema.tables WHERE table_name = 'company' LIMIT 1")) {
-                    hasTables = rs.next();
-                }
-
-                if (hasTables) {
-                    // Database has existing tables but might be missing schema history
-                    int historyCount = 0;
-                    try (var rs = stmt.executeQuery("SELECT COUNT(*) FROM flyway_schema_history")) {
-                        if (rs.next()) {
-                            historyCount = rs.getInt(1);
-                        }
-                    }
-
-                    if (historyCount == 0) {
-                        log.warn("Database has existing tables but no migration history. This could cause conflicts.");
-                        log.warn("Consider running: DELETE FROM flyway_schema_history WHERE version IN ('1','2','3','4','5','6','7','8','9','10','11');");
-                    }
-                }
-
-            }
-        } catch (SQLException e) {
-            log.warn("Could not check schema history: {}", e.getMessage());
-            // Don't throw - let Flyway handle it
-        }
-    }
-
-    private boolean hasExistingTables() {
-        try {
-            Flyway tempFlyway = Flyway.configure()
-                    .dataSource(databaseUrl, username, password)
-                    .load();
-
-            try (Connection conn = tempFlyway.getConfiguration().getDataSource().getConnection();
-                 Statement stmt = conn.createStatement()) {
-
-                // Check for key tables that should exist
-                try (var rs = stmt.executeQuery(
-                    "SELECT 1 FROM information_schema.tables WHERE table_name IN ('company', 'user', 'event') LIMIT 1")) {
-                    return rs.next();
-                }
-            }
-        } catch (SQLException e) {
-            log.warn("Could not check for existing tables: {}", e.getMessage());
-            return false;
         }
     }
 
