@@ -77,3 +77,4 @@ CREATE TRIGGER tr_calculate_rating_score_update
     BEFORE UPDATE ON rating
     FOR EACH ROW
     EXECUTE FUNCTION calculate_rating_score();
+
