@@ -7,6 +7,7 @@ import com.example.S_PACE.mapper.EventMapper;
 import com.example.S_PACE.pojo.Company;
 import com.example.S_PACE.pojo.Event;
 import com.example.S_PACE.pojo.User;
+import com.example.S_PACE.repository.CompanyRepository;
 import com.example.S_PACE.repository.EventRepository;
 import com.example.S_PACE.service.EventService;
 import org.slf4j.Logger;
@@ -28,6 +29,9 @@ public class EventServiceImpl implements EventService {
     private EventRepository eventRepository;
 
     @Autowired
+    private CompanyRepository companyRepository;
+
+    @Autowired
     private EventMapper eventMapper;
 
     @Autowired
@@ -47,8 +51,15 @@ public class EventServiceImpl implements EventService {
         }
 
         try {
-            // Get company reference
-            Company company = entityManager.getReference(Company.class, companyId);
+            // Validate company status - only ACTIVE companies can create events
+            Company company = companyRepository.findById(companyId)
+                    .orElseThrow(() -> new IllegalArgumentException("Company not found with ID: " + companyId));
+            
+            if (!company.getStatus().canCreateEvents()) {
+                throw new IllegalArgumentException("Only companies with ACTIVE status can create events. Current company status: " + company.getStatus());
+            }
+            
+            logger.info("Company status validation passed for company: {} with status: {}", companyId, company.getStatus());
             
             // Get user reference for createdBy
             User createdByUser = entityManager.getReference(User.class, createdBy);
