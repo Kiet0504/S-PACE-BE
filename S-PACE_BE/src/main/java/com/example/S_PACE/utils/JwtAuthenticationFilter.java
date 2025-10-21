@@ -32,41 +32,46 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, 
-                                    HttpServletResponse response, 
-                                    FilterChain filterChain) 
+    protected void doFilterInternal(HttpServletRequest request,
+                                    HttpServletResponse response,
+                                    FilterChain filterChain)
             throws ServletException, IOException {
-        
+
+        String requestURI = request.getRequestURI();
+
         try {
             // 1. Lấy token từ header
             String jwt = getJwtFromRequest(request);
-            
+
             if (jwt != null && jwtTokenProvider.validateToken(jwt)) {
                 // 2. Parse token để lấy userId
                 String userId = jwtTokenProvider.getUserIdFromJWT(jwt);
-                
+                logger.info("👤 User ID from token: {}", userId);
+
                 if (userId != null) {
                     // 3. Load user details từ database
                     Optional<User> userOptional = userRepository.findById(java.util.UUID.fromString(userId));
-                    
+
                     if (userOptional.isPresent()) {
                         User user = userOptional.get();
-                        
+
                         // 4. Tạo authorities từ role
                         String roleName = user.getRole() != null ? user.getRole().getRoleName() : "USER";
                         SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + roleName);
-                        
+
+                        logger.info("Authenticated user: {} with role: ROLE_{}", user.getEmail(), roleName);
+
                         // 5. Tạo authentication object
-                        UsernamePasswordAuthenticationToken authentication = 
+                        UsernamePasswordAuthenticationToken authentication =
                             new UsernamePasswordAuthenticationToken(
-                                user, 
-                                null, 
+                                user,
+                                null,
                                 Collections.singletonList(authority)
                             );
-                        
+
                         // 6. Set vào SecurityContext
                         SecurityContextHolder.getContext().setAuthentication(authentication);
-                        
+
                         logger.debug("JWT authentication successful for user: {}", user.getEmail());
                     } else {
                         logger.warn("User not found for JWT token with userId: {}", userId);
@@ -76,13 +81,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 }
             } else if (jwt != null) {
                 logger.warn("Invalid JWT token provided");
+            } else {
+                logger.info("No JWT token in request for: {}", requestURI);
             }
         } catch (Exception ex) {
             logger.error("Could not set user authentication in security context", ex);
             // Clear security context on error
             SecurityContextHolder.clearContext();
         }
-        
+
         filterChain.doFilter(request, response);
     }
 
