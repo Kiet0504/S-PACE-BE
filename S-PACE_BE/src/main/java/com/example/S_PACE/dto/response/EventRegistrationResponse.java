@@ -38,4 +38,5 @@ public class EventRegistrationResponse {
     String reasonForParticipation;
     String filePath;
     Integer birthYear;
+    String userAvatar; // User's avatar from User entity
 } 

@@ -219,6 +219,7 @@ public class EventRegistrationServiceImpl implements EventRegistrationService {
                 .reasonForParticipation(registration.getReasonForParticipation())
                 .filePath(registration.getFilePath())
                 .birthYear(registration.getBirthYear())
+                .userAvatar(registration.getUser().getAvatar()) // Add user's avatar
                 .build();
     }
 }
