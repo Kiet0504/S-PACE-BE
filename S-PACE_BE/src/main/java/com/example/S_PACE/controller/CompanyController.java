@@ -108,7 +108,7 @@ public class CompanyController {
         @ApiResponse(responseCode = "404", description = "Company not found"),
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    @PreAuthorize("hasAnyRole('ADMIN', 'COMPANY_ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'COMPANY_ADMIN', 'EVENT_MANAGER')")
     public ResponseEntity<ResponseDTO<CompanyResponse>> updateCompany(
             @PathVariable UUID companyId,
             @Valid @RequestBody CompanyRequest companyRequest) {
