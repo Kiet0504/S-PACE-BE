@@ -105,8 +105,7 @@ public class UserServiceImpl implements UserService {
         }
         
         // Check if user already exists
-        Optional<User> existingUser = userRepository.findByEmail(signUpRequest.getEmail());
-        if (existingUser.isPresent()) {
+        if (isEmailExists(signUpRequest.getEmail())) {
             logger.warn("User with email {} already exists", signUpRequest.getEmail());
             throw new IllegalArgumentException(ErrorStatus.USER_ALREADY_EXISTS.getDescription());
         }
@@ -233,8 +232,7 @@ public class UserServiceImpl implements UserService {
         }
 
         // Check if user already exists
-        Optional<User> existingUser = userRepository.findByEmail(createRequest.getEmail());
-        if (existingUser.isPresent()) {
+        if (isEmailExists(createRequest.getEmail())) {
             logger.warn("User with email {} already exists", createRequest.getEmail());
             throw new IllegalArgumentException(ErrorStatus.USER_ALREADY_EXISTS.getDescription());
         }
@@ -344,8 +342,7 @@ public class UserServiceImpl implements UserService {
         
         // Check if email is being changed and if it already exists
         if (updateRequest.getEmail() != null && !user.getEmail().equals(updateRequest.getEmail())) {
-            Optional<User> existingUser = userRepository.findByEmail(updateRequest.getEmail());
-            if (existingUser.isPresent() && !existingUser.get().getUserId().equals(userId)) {
+            if (isEmailExists(updateRequest.getEmail(), userId)) {
                 throw new IllegalArgumentException("Email already exists");
             }
         }
@@ -457,6 +454,40 @@ public class UserServiceImpl implements UserService {
     private boolean isValidRole(String roleName) {
         return "EVENT_MANAGER".equalsIgnoreCase(roleName) ||
                "COLLABORATOR".equalsIgnoreCase(roleName);
+    }
+
+    /**
+     * Check if email already exists in database
+     * @param email the email to check
+     * @param excludeUserId optional user ID to exclude from check (for update operations)
+     * @return true if email exists, false otherwise
+     */
+    private boolean isEmailExists(String email, UUID excludeUserId) {
+        if (email == null || email.trim().isEmpty()) {
+            return false;
+        }
+        
+        Optional<User> existingUser = userRepository.findByEmail(email.trim());
+        
+        if (existingUser.isPresent()) {
+            // If excludeUserId is provided, check if it's the same user
+            if (excludeUserId != null && existingUser.get().getUserId().equals(excludeUserId)) {
+                return false; // Same user, email is not duplicated
+            }
+            return true; // Email exists for different user
+        }
+        
+        return false; // Email doesn't exist
+    }
+
+    @Override
+    public boolean isEmailExists(String email) {
+        if (email == null || email.trim().isEmpty()) {
+            return false;
+        }
+        
+        Optional<User> existingUser = userRepository.findByEmail(email.trim());
+        return existingUser.isPresent();
     }
 
     @Override

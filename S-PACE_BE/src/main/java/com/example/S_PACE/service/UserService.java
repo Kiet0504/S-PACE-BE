@@ -31,4 +31,7 @@ public interface UserService {
     
     // Role update method for 2-step registration
     UserResponse updateUserRole(UUID userId, String roleName);
+    
+    // Email validation method
+    boolean isEmailExists(String email);
 }
