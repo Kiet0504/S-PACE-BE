@@ -316,6 +316,38 @@ public class UserController {
         }
     }
 
+    @GetMapping("/check-email")
+    @Operation(summary = "Check if email exists", description = "Check if an email address is already registered in the system")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Email check completed successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid email format"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    public ResponseEntity<ResponseDTO<Boolean>> checkEmailExists(@RequestParam String email) {
+        try {
+            logger.info("Checking if email exists: {}", email);
+            
+            // Validate email format
+            if (email == null || email.trim().isEmpty()) {
+                return ResponseEntity.badRequest()
+                    .body(new ResponseDTO<>(false, "Email is required", null));
+            }
+            
+            // Check if email exists
+            boolean emailExists = userService.isEmailExists(email.trim());
+            
+            String message = emailExists ? "Email already exists" : "Email is available";
+            logger.info("Email check result for {}: {}", email, emailExists ? "exists" : "available");
+            
+            return ResponseEntity.ok(new ResponseDTO<>(true, message, emailExists));
+            
+        } catch (Exception ex) {
+            logger.error("Error checking email {}: {}", email, ex.getMessage(), ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ResponseDTO<>(false, "Failed to check email", null));
+        }
+    }
+
     @GetMapping("/my-profile")
     @Operation(summary = "Get current user profile", description = "Retrieve the current authenticated user's profile")
     @ApiResponses(value = {
