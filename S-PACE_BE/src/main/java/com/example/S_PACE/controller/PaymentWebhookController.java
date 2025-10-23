@@ -26,18 +26,34 @@ public class PaymentWebhookController {
     private final SubscriptionService subscriptionService;
     private final ObjectMapper objectMapper;
 
+    /**
+     * PayOS webhook test endpoint - Responds to GET requests from PayOS validation
+     */
     @GetMapping("/payos-payment")
     @Operation(summary = "Test PayOS Webhook Endpoint", description = "Test endpoint for webhook connectivity")
-    public ResponseEntity<String> testWebhookEndpoint() {
-        return ResponseEntity.ok("PayOS webhook endpoint is working! Ready to receive payments.");
+    public ResponseEntity<Map<String, Object>> testWebhookEndpoint() {
+        log.info("PayOS webhook GET request received - validation test");
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("message", "PayOS webhook endpoint is working! Ready to receive payments.");
+        response.put("timestamp", System.currentTimeMillis());
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("")
     @Operation(summary = "Webhook Root Endpoint", description = "Root webhook endpoint for PayOS verification")
-    public ResponseEntity<String> webhookRoot() {
-        return ResponseEntity.ok("Webhook service is running");
+    public ResponseEntity<Map<String, Object>> webhookRoot() {
+        log.info("Webhook root endpoint accessed");
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("message", "Webhook service is running");
+        response.put("timestamp", System.currentTimeMillis());
+        return ResponseEntity.ok(response);
     }
 
+    /**
+     * Main PayOS webhook endpoint - Handles actual payment notifications
+     */
     @PostMapping("/payos-payment")
     @Operation(summary = "PayOS Payment Webhook", description = "Webhook endpoint to receive payment notifications from PayOS")
     public ResponseEntity<Map<String, Object>> handlePayOSWebhook(
@@ -48,7 +64,7 @@ public class PaymentWebhookController {
         Map<String, Object> response = new HashMap<>();
 
         try {
-            log.info("=== PayOS Webhook Received ===");
+            log.info("=== PayOS Webhook POST Request Received ===");
             log.info("Signature: {}", signature);
             log.info("Body: {}", webhookBody);
 
@@ -63,7 +79,6 @@ public class PaymentWebhookController {
 
             // Parse webhook body to check if it's a real payment notification
             try {
-                // Try to parse and extract payment data even without signature
                 com.fasterxml.jackson.databind.JsonNode jsonNode = objectMapper.readTree(webhookBody);
 
                 // Check if this is a successful payment webhook
@@ -71,17 +86,16 @@ public class PaymentWebhookController {
                     String code = jsonNode.get("code").asText();
 
                     if ("00".equals(code)) { // PayOS success code
-                        // Extract order information
                         com.fasterxml.jackson.databind.JsonNode dataNode = jsonNode.get("data");
                         long orderCode = dataNode.get("orderCode").asLong();
                         int amount = dataNode.get("amount").asInt();
 
-                        log.info("Payment successful - OrderCode: {}, Amount: {}", orderCode, amount);
+                        log.info("✓ Payment successful - OrderCode: {}, Amount: {}", orderCode, amount);
 
                         // Process the payment
                         try {
                             subscriptionService.confirmSubscriptionPayment(orderCode);
-                            log.info("Successfully confirmed subscription payment for orderCode: {}", orderCode);
+                            log.info("✓ Successfully confirmed subscription payment for orderCode: {}", orderCode);
 
                             response.put("success", true);
                             response.put("message", "Payment processed successfully");
@@ -90,7 +104,7 @@ public class PaymentWebhookController {
                             return ResponseEntity.ok(response);
 
                         } catch (Exception e) {
-                            log.error("Error confirming subscription payment: {}", e.getMessage(), e);
+                            log.error("✗ Error confirming subscription payment: {}", e.getMessage(), e);
                             // Still return success to PayOS to prevent retries
                             response.put("success", true);
                             response.put("message", "Webhook received but payment processing failed: " + e.getMessage());
@@ -98,6 +112,8 @@ public class PaymentWebhookController {
                             response.put("timestamp", System.currentTimeMillis());
                             return ResponseEntity.ok(response);
                         }
+                    } else {
+                        log.warn("Payment not successful - Code: {}", code);
                     }
                 }
             } catch (Exception parseException) {
@@ -109,7 +125,7 @@ public class PaymentWebhookController {
                 log.info("Processing webhook with signature verification");
                 WebhookResponse webhookResponse = paymentService.verifyPaymentWebhook(webhookBody);
 
-                log.info("Successfully verified payment webhook for orderCode: {}, status: {}",
+                log.info("✓ Successfully verified payment webhook for orderCode: {}, status: {}",
                         webhookResponse.getOrderCode(), webhookResponse.getCode());
 
                 handleSuccessfulPayment(webhookResponse);
@@ -129,11 +145,12 @@ public class PaymentWebhookController {
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
-            log.error("Error processing PayOS webhook: {}", e.getMessage(), e);
+            log.error("✗ Error processing PayOS webhook: {}", e.getMessage(), e);
             response.put("success", false);
             response.put("message", "Error processing webhook: " + e.getMessage());
             response.put("timestamp", System.currentTimeMillis());
-            return ResponseEntity.status(HttpStatus.OK).body(response); // Return 200 even on error to prevent PayOS retries
+            // Return 200 even on error to prevent PayOS retries
+            return ResponseEntity.status(HttpStatus.OK).body(response);
         }
     }
 
@@ -144,7 +161,7 @@ public class PaymentWebhookController {
             // Check if this is a subscription payment and handle accordingly
             try {
                 subscriptionService.confirmSubscriptionPayment(webhookResponse.getOrderCode());
-                log.info("Successfully confirmed subscription payment for orderCode: {}", webhookResponse.getOrderCode());
+                log.info("✓ Successfully confirmed subscription payment for orderCode: {}", webhookResponse.getOrderCode());
             } catch (IllegalArgumentException e) {
                 // This might not be a subscription payment, or it's already been processed
                 log.info("Payment orderCode {} is not a subscription payment or already processed: {}",
@@ -154,11 +171,11 @@ public class PaymentWebhookController {
                 // Example: Regular product purchases, donations, etc.
             }
 
-            log.info("Successfully handled payment for orderCode: {} with amount: {}",
+            log.info("✓ Successfully handled payment for orderCode: {} with amount: {}",
                     webhookResponse.getOrderCode(), webhookResponse.getAmount());
 
         } catch (Exception e) {
-            log.error("Error handling successful payment for orderCode {}: {}",
+            log.error("✗ Error handling successful payment for orderCode {}: {}",
                     webhookResponse.getOrderCode(), e.getMessage(), e);
         }
     }
