@@ -19,7 +19,6 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/admin/company-auto-approval-rules")
-@CrossOrigin(origins = "*")
 public class CompanyAutoApprovalRuleController {
 
     private static final Logger logger = LoggerFactory.getLogger(CompanyAutoApprovalRuleController.class);
