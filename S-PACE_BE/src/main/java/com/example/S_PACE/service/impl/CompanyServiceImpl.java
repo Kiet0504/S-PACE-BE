@@ -6,6 +6,7 @@ import com.example.S_PACE.enums.CompanyStatus;
 import com.example.S_PACE.pojo.Company;
 import com.example.S_PACE.repository.CompanyRepository;
 import com.example.S_PACE.service.CompanyService;
+import com.example.S_PACE.service.CompanyAutoApprovalService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -25,6 +27,9 @@ public class CompanyServiceImpl implements CompanyService {
 
     @Autowired
     private CompanyRepository companyRepository;
+
+    @Autowired
+    private CompanyAutoApprovalService autoApprovalService;
 
     @Override
     @Transactional
@@ -40,7 +45,19 @@ public class CompanyServiceImpl implements CompanyService {
         Company company = new Company();
         company.setCompanyName(companyRequest.getCompanyName());
         company.setAddress(companyRequest.getAddress());
-        company.setStatus(companyRequest.getStatus() != null ? companyRequest.getStatus() : CompanyStatus.ACTIVE);
+        company.setStatus(companyRequest.getStatus() != null ? companyRequest.getStatus() : CompanyStatus.PENDING_APPROVAL);
+        
+        // Calculate validation score and check auto-approval
+        Integer validationScore = autoApprovalService.calculateValidationScore(companyRequest);
+        company.setValidationScore(validationScore);
+        
+        // Check if eligible for auto-approval
+        if (autoApprovalService.isEligibleForAutoApproval(companyRequest)) {
+            company.setStatus(CompanyStatus.ACTIVE);
+            company.setIsAutoApproved(true);
+            company.setAutoApprovalReason("Tự động duyệt dựa trên điểm validation: " + validationScore);
+            logger.info("Company '{}' auto-approved with score: {}", companyRequest.getCompanyName(), validationScore);
+        }
         
         // Save company
         Company savedCompany = companyRepository.save(company);
@@ -185,6 +202,36 @@ public class CompanyServiceImpl implements CompanyService {
     public boolean canCreateEvents(UUID companyId) {
         Optional<Company> company = companyRepository.findById(companyId);
         return company.isPresent() && company.get().getStatus().canCreateEvents();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Integer calculateValidationScore(UUID companyId) {
+        Company company = companyRepository.findById(companyId)
+                .orElseThrow(() -> new IllegalArgumentException("Company not found with ID: " + companyId));
+        return autoApprovalService.calculateValidationScore(company);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Object> getValidationDetails(UUID companyId) {
+        Company company = companyRepository.findById(companyId)
+                .orElseThrow(() -> new IllegalArgumentException("Company not found with ID: " + companyId));
+        return autoApprovalService.getValidationDetails(company);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean isEligibleForAutoApproval(UUID companyId) {
+        Company company = companyRepository.findById(companyId)
+                .orElseThrow(() -> new IllegalArgumentException("Company not found with ID: " + companyId));
+        return autoApprovalService.isEligibleForAutoApproval(company);
+    }
+
+    @Override
+    @Transactional
+    public void updateValidationScore(UUID companyId) {
+        autoApprovalService.updateValidationScore(companyId);
     }
 
     private CompanyResponse mapToResponse(Company company) {

@@ -38,4 +38,17 @@ public class Company {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     CompanyStatus status;
+
+    // Auto-approval validation fields
+    @Column(name = "is_auto_approved")
+    Boolean isAutoApproved = false;
+
+    @Column(name = "auto_approval_reason", columnDefinition = "TEXT")
+    String autoApprovalReason;
+
+    @Column(name = "validation_score")
+    Integer validationScore = 0;
+
+    @Column(name = "validation_details", columnDefinition = "JSONB")
+    String validationDetails;
 }

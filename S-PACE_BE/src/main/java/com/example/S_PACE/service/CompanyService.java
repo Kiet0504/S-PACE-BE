@@ -5,6 +5,7 @@ import com.example.S_PACE.dto.response.CompanyResponse;
 import com.example.S_PACE.enums.CompanyStatus;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 public interface CompanyService {
@@ -26,6 +27,12 @@ public interface CompanyService {
     boolean existsById(UUID companyId);
     boolean existsByName(String companyName);
     boolean canCreateEvents(UUID companyId);
+    
+    // Auto-approval methods
+    Integer calculateValidationScore(UUID companyId);
+    Map<String, Object> getValidationDetails(UUID companyId);
+    boolean isEligibleForAutoApproval(UUID companyId);
+    void updateValidationScore(UUID companyId);
 }
 
 
