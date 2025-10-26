@@ -6,9 +6,9 @@ services:
     container_name: s-space-app-prod
     environment:
       SPRING_PROFILES_ACTIVE: prod
-      DB_HOST: ${DB_HOST:-REDACTED_IP}
-      DB_PORT: ${DB_PORT:-5432}
-      DB_NAME: ${DB_NAME:-space_db_prod}
+      DB_HOST: ${DB_HOST}
+      DB_PORT: 5432
+      DB_NAME: space_db_prod
       DB_USERNAME: ${DB_USERNAME:-postgres}
       DB_PASSWORD: ${DB_PASSWORD}
       REDIS_HOST: redis
@@ -31,8 +31,32 @@ services:
       - ./uploads:/app/uploads
       - ./logs:/app/logs
     depends_on:
+      postgres:
+        condition: service_healthy
       redis:
         condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - s-space-network
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: s-space-postgres-prod
+    environment:
+      POSTGRES_DB: space_db_prod
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+      - ./init-database.sql:/docker-entrypoint-initdb.d/01-init.sql
+    healthcheck:
+      test:
+        ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres} -d space_db_prod"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped
     networks:
       - s-space-network
@@ -69,6 +93,8 @@ services:
       - s-space-network
 
 volumes:
+  postgres_prod_data:
+    driver: local
   redis_prod_data:
     driver: local
 
