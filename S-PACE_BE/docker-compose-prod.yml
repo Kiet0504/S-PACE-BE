@@ -5,7 +5,7 @@ services:
     container_name: s-space-app-prod
     environment:
       SPRING_PROFILES_ACTIVE: prod
-      DB_HOST: host.docker.internal
+      DB_HOST: 172.17.0.1
       DB_PORT: 5432
       DB_NAME: space_db_prod
       DB_USERNAME: ${DB_USERNAME:-postgres}
@@ -34,8 +34,6 @@ services:
     restart: unless-stopped
     networks:
       - s-space-network
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
 
   redis:
     image: redis:7-alpine
