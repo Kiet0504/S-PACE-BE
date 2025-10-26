@@ -1,12 +1,11 @@
 version: "3.8"
-
 services:
   app:
     build: .
     container_name: s-space-app-prod
     environment:
       SPRING_PROFILES_ACTIVE: prod
-      DB_HOST: ${DB_HOST}
+      DB_HOST: 172.17.0.1
       DB_PORT: 5432
       DB_NAME: space_db_prod
       DB_USERNAME: ${DB_USERNAME:-postgres}
@@ -31,32 +30,7 @@ services:
       - ./uploads:/app/uploads
       - ./logs:/app/logs
     depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    restart: unless-stopped
-    networks:
-      - s-space-network
-
-  postgres:
-    image: postgres:15-alpine
-    container_name: s-space-postgres-prod
-    environment:
-      POSTGRES_DB: space_db_prod
-      POSTGRES_USER: ${DB_USERNAME:-postgres}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_prod_data:/var/lib/postgresql/data
-      - ./init-database.sql:/docker-entrypoint-initdb.d/01-init.sql
-    healthcheck:
-      test:
-        ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres} -d space_db_prod"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      - redis
     restart: unless-stopped
     networks:
       - s-space-network
@@ -64,10 +38,11 @@ services:
   redis:
     image: redis:7-alpine
     container_name: s-space-redis-prod
+    command: redis-server --appendonly yes
     ports:
       - "6379:6379"
     volumes:
-      - redis_prod_data:/data
+      - ./redis-data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -91,12 +66,6 @@ services:
     restart: unless-stopped
     networks:
       - s-space-network
-
-volumes:
-  postgres_prod_data:
-    driver: local
-  redis_prod_data:
-    driver: local
 
 networks:
   s-space-network:
