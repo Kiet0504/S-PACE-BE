@@ -5,8 +5,11 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @FieldDefaults(level = AccessLevel.PRIVATE)
@@ -49,6 +52,7 @@ public class Company {
     @Column(name = "validation_score")
     Integer validationScore = 0;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "validation_details", columnDefinition = "JSONB")
-    String validationDetails;
+    Map<String, Object> validationDetails;
 }

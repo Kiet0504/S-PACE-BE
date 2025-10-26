@@ -7,8 +7,6 @@ import com.example.S_PACE.pojo.CompanyAutoApprovalRule;
 import com.example.S_PACE.repository.CompanyAutoApprovalRuleRepository;
 import com.example.S_PACE.repository.CompanyRepository;
 import com.example.S_PACE.service.CompanyAutoApprovalService;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,8 +29,6 @@ public class CompanyAutoApprovalServiceImpl implements CompanyAutoApprovalServic
     @Autowired
     private CompanyRepository companyRepository;
 
-    @Autowired
-    private ObjectMapper objectMapper;
 
     @Override
     @Transactional(readOnly = true)
@@ -186,12 +182,7 @@ public class CompanyAutoApprovalServiceImpl implements CompanyAutoApprovalServic
         Map<String, Object> validationDetails = getValidationDetails(company);
         
         company.setValidationScore(newScore);
-        
-        try {
-            company.setValidationDetails(objectMapper.writeValueAsString(validationDetails));
-        } catch (JsonProcessingException e) {
-            logger.error("Error serializing validation details: {}", e.getMessage());
-        }
+        company.setValidationDetails(validationDetails);
         
         // Kiểm tra điều kiện tự động duyệt
         if (newScore >= AUTO_APPROVAL_THRESHOLD && company.getStatus() == CompanyStatus.PENDING_APPROVAL) {

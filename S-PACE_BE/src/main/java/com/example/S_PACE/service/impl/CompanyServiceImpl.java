@@ -51,6 +51,10 @@ public class CompanyServiceImpl implements CompanyService {
         Integer validationScore = autoApprovalService.calculateValidationScore(companyRequest);
         company.setValidationScore(validationScore);
         
+        // Set validation details
+        Map<String, Object> validationDetails = autoApprovalService.getValidationDetails(companyRequest);
+        company.setValidationDetails(validationDetails);
+        
         // Check if eligible for auto-approval
         if (autoApprovalService.isEligibleForAutoApproval(companyRequest)) {
             company.setStatus(CompanyStatus.ACTIVE);
