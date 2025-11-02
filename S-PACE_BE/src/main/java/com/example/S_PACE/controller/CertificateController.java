@@ -364,6 +364,7 @@ public class CertificateController {
                 .certificatesId(certificate.getCertificatesId())
                 .eventId(certificate.getEvent() != null ? certificate.getEvent().getEventId() : null)
                 .eventName(certificate.getEvent() != null ? certificate.getEvent().getTitle() : null)
+                .eventPicture(certificate.getEvent() != null ? certificate.getEvent().getPicture() : null)
                 .userId(certificate.getUser() != null ? certificate.getUser().getUserId() : null)
                 .userName(certificate.getUser() != null ? certificate.getUser().getFullName() : null)
                 .certificateFilePath(fileUrl)

@@ -16,6 +16,7 @@ public class CertificateResponse {
     private UUID certificatesId;
     private UUID eventId;
     private String eventName;
+    private String eventPicture; // Event picture from Event entity
     private UUID userId;
     private String userName;
     private String certificateFilePath;
