@@ -1,8 +1,10 @@
 package com.example.S_PACE.service;
 
 import com.example.S_PACE.dto.request.AdminCreateUserRequest;
+import com.example.S_PACE.dto.request.CreateEmployeeRequest;
 import com.example.S_PACE.dto.request.LoginRequest;
 import com.example.S_PACE.dto.request.SignUpRequest;
+import com.example.S_PACE.dto.request.UpdateEmployeeRequest;
 import com.example.S_PACE.dto.request.UserUpdateRequest;
 import com.example.S_PACE.dto.response.LoginResponse;
 import com.example.S_PACE.dto.response.UserResponse;
@@ -17,6 +19,13 @@ public interface UserService {
 
     // Admin method to create user accounts
     UserResponse createUserByAdmin(AdminCreateUserRequest createRequest);
+
+    // Event Manager methods for employee management
+    UserResponse createEmployeeForEventManager(UUID eventManagerId, CreateEmployeeRequest createRequest);
+    List<UserResponse> getEmployeesByEventManager(UUID eventManagerId);
+    UserResponse getEmployeeByIdForEventManager(UUID eventManagerId, UUID employeeId);
+    UserResponse updateEmployeeForEventManager(UUID eventManagerId, UUID employeeId, UpdateEmployeeRequest updateRequest);
+    void deleteEmployeeForEventManager(UUID eventManagerId, UUID employeeId);
 
     // Google OAuth callback processing
     LoginResponse processGoogleOAuthCallback(String code, String state);

@@ -1,7 +1,9 @@
 package com.example.S_PACE.controller;
 
 import com.example.S_PACE.dto.request.AdminCreateUserRequest;
+import com.example.S_PACE.dto.request.CreateEmployeeRequest;
 import com.example.S_PACE.dto.request.RoleUpdateRequest;
+import com.example.S_PACE.dto.request.UpdateEmployeeRequest;
 import com.example.S_PACE.dto.request.UserUpdateRequest;
 import com.example.S_PACE.dto.response.ResponseDTO;
 import com.example.S_PACE.dto.response.UserResponse;
@@ -70,6 +72,146 @@ public class UserController {
             logger.error("Error creating user by admin: {}", ex.getMessage(), ex);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(new ResponseDTO<>(false, "Failed to create user", null));
+        }
+    }
+
+    @PostMapping("/event-manager/create-employee")
+    @Operation(summary = "Create employee by event manager", description = "Event Manager endpoint to create employee accounts. The employee will be assigned to the same company as the event manager.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "201", description = "Employee created successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid request data or user already exists"),
+        @ApiResponse(responseCode = "403", description = "Access denied - Event Manager role required"),
+        @ApiResponse(responseCode = "404", description = "Event Manager not found or has no company assigned"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @PreAuthorize("hasRole('EVENT_MANAGER')")
+    public ResponseEntity<ResponseDTO<UserResponse>> createEmployee(HttpServletRequest request,
+            @Valid @RequestBody CreateEmployeeRequest createRequest) {
+        try {
+            UUID eventManagerId = getUserIdFromToken(request);
+            logger.info("Event Manager {} creating employee with email: {}", eventManagerId, createRequest.getEmail());
+            UserResponse createdEmployee = userService.createEmployeeForEventManager(eventManagerId, createRequest);
+            return ResponseEntity.status(HttpStatus.CREATED)
+                .body(new ResponseDTO<>(true, "Employee created successfully", createdEmployee));
+        } catch (IllegalArgumentException ex) {
+            logger.warn("Employee creation validation error: {}", ex.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ResponseDTO<>(false, ex.getMessage(), null));
+        } catch (Exception ex) {
+            logger.error("Error creating employee by event manager: {}", ex.getMessage(), ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ResponseDTO<>(false, "Failed to create employee", null));
+        }
+    }
+
+    @GetMapping("/event-manager/employees")
+    @Operation(summary = "Get all employees by event manager", description = "Event Manager endpoint to retrieve all employees in the same company. Only employees with EMPLOYEE role are returned.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Employees retrieved successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid request - Event Manager not found or has no company"),
+        @ApiResponse(responseCode = "403", description = "Access denied - Event Manager role required"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @PreAuthorize("hasRole('EVENT_MANAGER')")
+    public ResponseEntity<ResponseDTO<List<UserResponse>>> getEmployees(HttpServletRequest request) {
+        try {
+            UUID eventManagerId = getUserIdFromToken(request);
+            logger.info("Event Manager {} fetching employees", eventManagerId);
+            List<UserResponse> employees = userService.getEmployeesByEventManager(eventManagerId);
+            return ResponseEntity.ok(new ResponseDTO<>(true, "Employees retrieved successfully", employees));
+        } catch (IllegalArgumentException ex) {
+            logger.warn("Error fetching employees: {}", ex.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ResponseDTO<>(false, ex.getMessage(), null));
+        } catch (Exception ex) {
+            logger.error("Error fetching employees: {}", ex.getMessage(), ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ResponseDTO<>(false, "Failed to fetch employees", null));
+        }
+    }
+
+    @GetMapping("/event-manager/employees/{employeeId}")
+    @Operation(summary = "Get employee by ID", description = "Event Manager endpoint to retrieve a specific employee by ID. Only employees in the same company can be accessed.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Employee retrieved successfully"),
+        @ApiResponse(responseCode = "400", description = "Employee not found or does not belong to same company"),
+        @ApiResponse(responseCode = "403", description = "Access denied - Event Manager role required"),
+        @ApiResponse(responseCode = "404", description = "Employee not found"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @PreAuthorize("hasRole('EVENT_MANAGER')")
+    public ResponseEntity<ResponseDTO<UserResponse>> getEmployeeById(HttpServletRequest request,
+            @PathVariable UUID employeeId) {
+        try {
+            UUID eventManagerId = getUserIdFromToken(request);
+            logger.info("Event Manager {} fetching employee {}", eventManagerId, employeeId);
+            UserResponse employee = userService.getEmployeeByIdForEventManager(eventManagerId, employeeId);
+            return ResponseEntity.ok(new ResponseDTO<>(true, "Employee retrieved successfully", employee));
+        } catch (IllegalArgumentException ex) {
+            logger.warn("Error fetching employee: {}", ex.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ResponseDTO<>(false, ex.getMessage(), null));
+        } catch (Exception ex) {
+            logger.error("Error fetching employee: {}", ex.getMessage(), ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ResponseDTO<>(false, "Failed to fetch employee", null));
+        }
+    }
+
+    @PutMapping("/event-manager/employees/{employeeId}")
+    @Operation(summary = "Update employee by event manager", description = "Event Manager endpoint to update employee information. Only employees in the same company can be updated.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Employee updated successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid request data or employee does not belong to same company"),
+        @ApiResponse(responseCode = "403", description = "Access denied - Event Manager role required"),
+        @ApiResponse(responseCode = "404", description = "Employee not found"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @PreAuthorize("hasRole('EVENT_MANAGER')")
+    public ResponseEntity<ResponseDTO<UserResponse>> updateEmployee(HttpServletRequest request,
+            @PathVariable UUID employeeId,
+            @Valid @RequestBody UpdateEmployeeRequest updateRequest) {
+        try {
+            UUID eventManagerId = getUserIdFromToken(request);
+            logger.info("Event Manager {} updating employee {}", eventManagerId, employeeId);
+            UserResponse updatedEmployee = userService.updateEmployeeForEventManager(eventManagerId, employeeId, updateRequest);
+            return ResponseEntity.ok(new ResponseDTO<>(true, "Employee updated successfully", updatedEmployee));
+        } catch (IllegalArgumentException ex) {
+            logger.warn("Employee update validation error: {}", ex.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ResponseDTO<>(false, ex.getMessage(), null));
+        } catch (Exception ex) {
+            logger.error("Error updating employee: {}", ex.getMessage(), ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ResponseDTO<>(false, "Failed to update employee", null));
+        }
+    }
+
+    @DeleteMapping("/event-manager/employees/{employeeId}")
+    @Operation(summary = "Delete employee by event manager", description = "Event Manager endpoint to delete (soft delete) an employee. Only employees in the same company can be deleted.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Employee deleted successfully"),
+        @ApiResponse(responseCode = "400", description = "Employee not found or does not belong to same company"),
+        @ApiResponse(responseCode = "403", description = "Access denied - Event Manager role required"),
+        @ApiResponse(responseCode = "404", description = "Employee not found"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @PreAuthorize("hasRole('EVENT_MANAGER')")
+    public ResponseEntity<ResponseDTO<Void>> deleteEmployee(HttpServletRequest request,
+            @PathVariable UUID employeeId) {
+        try {
+            UUID eventManagerId = getUserIdFromToken(request);
+            logger.info("Event Manager {} deleting employee {}", eventManagerId, employeeId);
+            userService.deleteEmployeeForEventManager(eventManagerId, employeeId);
+            return ResponseEntity.ok(new ResponseDTO<>(true, "Employee deleted successfully", null));
+        } catch (IllegalArgumentException ex) {
+            logger.warn("Employee deletion validation error: {}", ex.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ResponseDTO<>(false, ex.getMessage(), null));
+        } catch (Exception ex) {
+            logger.error("Error deleting employee: {}", ex.getMessage(), ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ResponseDTO<>(false, "Failed to delete employee", null));
         }
     }
 

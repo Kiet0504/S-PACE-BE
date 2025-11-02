@@ -22,7 +22,9 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -82,7 +84,7 @@ public class EventRegistrationController {
         @ApiResponse(responseCode = "400", description = "Invalid request data"),
         @ApiResponse(responseCode = "404", description = "Registration not found")
     })
-    @PreAuthorize("hasAnyRole('EVENT_MANAGER', 'COMPANY_ADMIN', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('EVENT_MANAGER', 'COMPANY_ADMIN', 'ADMIN', 'EMPLOYEE')")
     public ResponseEntity<ResponseDTO<EventRegistrationResponse>> updateRegistrationStatus(
             @PathVariable UUID registrationId,
             @RequestParam EventRegistrationStatus status,
@@ -109,7 +111,7 @@ public class EventRegistrationController {
 
     @GetMapping
     @Operation(summary = "Get all registrations", description = "Retrieve all event registrations")
-    @PreAuthorize("hasAnyRole('EVENT_MANAGER', 'COMPANY_ADMIN', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('EVENT_MANAGER', 'COMPANY_ADMIN', 'ADMIN', 'EMPLOYEE')")
     public ResponseEntity<ResponseDTO<List<EventRegistrationResponse>>> getAllRegistrations() {
         try {
             logger.info("Fetching all event registrations");
@@ -139,7 +141,7 @@ public class EventRegistrationController {
 
     @GetMapping("/event/{eventId}")
     @Operation(summary = "Get registrations by event ID", description = "Retrieve registrations for a specific event")
-    @PreAuthorize("hasAnyRole('EVENT_MANAGER', 'COMPANY_ADMIN', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('EVENT_MANAGER', 'COMPANY_ADMIN', 'ADMIN', 'EMPLOYEE')")
     public ResponseEntity<ResponseDTO<List<EventRegistrationResponse>>> getRegistrationsByEventId(@PathVariable UUID eventId) {
         try {
             logger.info("Fetching registrations for event: {}", eventId);
@@ -154,7 +156,7 @@ public class EventRegistrationController {
 
     @GetMapping("/{registrationId}")
     @Operation(summary = "Get registration by ID", description = "Retrieve a specific registration by its ID")
-    @PreAuthorize("hasAnyRole('EVENT_MANAGER', 'COMPANY_ADMIN', 'ADMIN', 'COLLABORATOR')")
+    @PreAuthorize("hasAnyRole('EVENT_MANAGER', 'COMPANY_ADMIN', 'ADMIN', 'EMPLOYEE', 'COLLABORATOR')")
     public ResponseEntity<ResponseDTO<EventRegistrationResponse>> getRegistrationById(@PathVariable UUID registrationId) {
         try {
             logger.info("Fetching registration by ID: {}", registrationId);
@@ -173,7 +175,7 @@ public class EventRegistrationController {
 
     @GetMapping("/status/{status}")
     @Operation(summary = "Get registrations by status", description = "Retrieve registrations with a specific status")
-    @PreAuthorize("hasAnyRole('EVENT_MANAGER', 'COMPANY_ADMIN', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('EVENT_MANAGER', 'COMPANY_ADMIN', 'ADMIN', 'EMPLOYEE')")
     public ResponseEntity<ResponseDTO<List<EventRegistrationResponse>>> getRegistrationsByStatus(@PathVariable EventRegistrationStatus status) {
         try {
             logger.info("Fetching registrations with status: {}", status);
@@ -227,6 +229,113 @@ public class EventRegistrationController {
             logger.error("Unexpected error during cancellation: {}", ex.getMessage(), ex);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(new ResponseDTO<>(false, "Cancellation failed", null));
+        }
+    }
+
+    @PostMapping("/{registrationId}/auto-approve-by-rating")
+    @Operation(summary = "Tự động duyệt CTV dựa trên rating theo 4 cột", 
+        description = "Quy trình: Bước 1 - BTC chọn số điểm các tiêu chí rating (điểm tối thiểu cho từng cột và/hoặc tổng điểm). " +
+                     "Bước 2 - Duyệt nhanh một đăng ký cụ thể dựa trên các tiêu chí đã chọn. " +
+                     "Hệ thống sẽ kiểm tra và tự động duyệt nếu CTV đáp ứng tất cả tiêu chí mà BTC đã chọn.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Đăng ký được tự động duyệt hoặc không đủ điều kiện"),
+        @ApiResponse(responseCode = "404", description = "Không tìm thấy đăng ký")
+    })
+    @PreAuthorize("hasAnyRole('EVENT_MANAGER', 'COMPANY_ADMIN', 'ADMIN', 'EMPLOYEE')")
+    public ResponseEntity<ResponseDTO<EventRegistrationResponse>> autoApproveByRating(
+            @PathVariable UUID registrationId,
+            @RequestParam(required = false) Double minPunctuality,
+            @RequestParam(required = false) Double minQuality,
+            @RequestParam(required = false) Double minAttitude,
+            @RequestParam(required = false) Double minTeamwork,
+            @RequestParam(required = false) Double minTotalScore,
+            @RequestParam(required = false) Integer minTotalRatings) {
+        try {
+            logger.info("BTC thực hiện duyệt nhanh đăng ký {} với các tiêu chí rating đã chọn", registrationId);
+            
+            // Kiểm tra xem BTC có chọn tiêu chí rating nào không (ngoài minTotalRatings)
+            boolean hasRatingCriteria = minPunctuality != null || minQuality != null || 
+                                       minAttitude != null || minTeamwork != null || minTotalScore != null;
+            
+            if (!hasRatingCriteria) {
+                logger.warn("Lưu ý: BTC chưa chọn tiêu chí rating nào, hệ thống sẽ chỉ kiểm tra số lượng rating");
+            }
+            
+            EventRegistrationResponse response = eventRegistrationService.autoApproveByRating(
+                registrationId, minPunctuality, minQuality, minAttitude, minTeamwork, minTotalScore, minTotalRatings);
+            
+            if (response != null) {
+                return ResponseEntity.ok(new ResponseDTO<>(true, 
+                    "Đăng ký đã được tự động duyệt dựa trên các tiêu chí rating mà BTC đã chọn", response));
+            } else {
+                String message = hasRatingCriteria 
+                    ? "Đăng ký không đủ điều kiện để tự động duyệt (CTV chưa đạt các tiêu chí rating mà BTC đã chọn)"
+                    : "Đăng ký không đủ điều kiện để tự động duyệt (CTV chưa có đủ số lượng rating yêu cầu)";
+                return ResponseEntity.ok(new ResponseDTO<>(false, message, null));
+            }
+            
+        } catch (IllegalArgumentException ex) {
+            logger.warn("Registration not found for auto-approval: {}", ex.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ResponseDTO<>(false, ex.getMessage(), null));
+        } catch (Exception ex) {
+            logger.error("Unexpected error during auto-approval: {}", ex.getMessage(), ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ResponseDTO<>(false, "Auto-approval failed", null));
+        }
+    }
+
+    @PostMapping("/auto-approve-all-by-rating")
+    @Operation(summary = "Tự động duyệt tất cả CTV dựa trên rating theo 4 cột", 
+        description = "Quy trình: Bước 1 - BTC chọn số điểm các tiêu chí rating (điểm tối thiểu cho từng cột và/hoặc tổng điểm). " +
+                     "Bước 2 - Duyệt nhanh tất cả các đăng ký đang PENDING dựa trên các tiêu chí đã chọn. " +
+                     "Hệ thống sẽ tự động duyệt tất cả đăng ký PENDING đáp ứng các tiêu chí mà BTC đã chọn.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Hoàn thành quá trình tự động duyệt")
+    })
+    @PreAuthorize("hasAnyRole('EVENT_MANAGER', 'COMPANY_ADMIN', 'ADMIN', 'EMPLOYEE')")
+    public ResponseEntity<ResponseDTO<Map<String, Object>>> autoApproveAllByRating(
+            @RequestParam(required = false) Double minPunctuality,
+            @RequestParam(required = false) Double minQuality,
+            @RequestParam(required = false) Double minAttitude,
+            @RequestParam(required = false) Double minTeamwork,
+            @RequestParam(required = false) Double minTotalScore,
+            @RequestParam(required = false) Integer minTotalRatings) {
+        try {
+            logger.info("BTC thực hiện duyệt nhanh tất cả đăng ký PENDING với các tiêu chí rating - " +
+                "Punctuality: {}, Quality: {}, Attitude: {}, Teamwork: {}, TotalScore: {}, MinRatings: {}",
+                minPunctuality, minQuality, minAttitude, minTeamwork, minTotalScore, minTotalRatings);
+            
+            // Kiểm tra xem BTC có chọn tiêu chí rating nào không
+            boolean hasRatingCriteria = minPunctuality != null || minQuality != null || 
+                                       minAttitude != null || minTeamwork != null || minTotalScore != null;
+            
+            if (!hasRatingCriteria) {
+                logger.warn("Lưu ý: BTC chưa chọn tiêu chí rating nào, hệ thống sẽ chỉ kiểm tra số lượng rating cho tất cả đăng ký");
+            } else {
+                logger.info("BTC đã chọn các tiêu chí rating, bắt đầu quá trình duyệt nhanh");
+            }
+            
+            int approvedCount = eventRegistrationService.autoApproveAllByRating(
+                minPunctuality, minQuality, minAttitude, minTeamwork, minTotalScore, minTotalRatings);
+            
+            Map<String, Object> result = new HashMap<>();
+            result.put("approvedCount", approvedCount);
+            result.put("minPunctuality", minPunctuality);
+            result.put("minQuality", minQuality);
+            result.put("minAttitude", minAttitude);
+            result.put("minTeamwork", minTeamwork);
+            result.put("minTotalScore", minTotalScore);
+            result.put("minTotalRatings", minTotalRatings != null ? minTotalRatings : 5);
+            result.put("message", String.format("Đã tự động duyệt %d đăng ký dựa trên các tiêu chí rating mà BTC đã chọn", approvedCount));
+            
+            return ResponseEntity.ok(new ResponseDTO<>(true, 
+                "Hoàn thành quá trình duyệt nhanh. BTC đã chọn tiêu chí và hệ thống đã tự động duyệt các đăng ký đáp ứng tiêu chí.", result));
+            
+        } catch (Exception ex) {
+            logger.error("Unexpected error during bulk auto-approval: {}", ex.getMessage(), ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ResponseDTO<>(false, "Auto-approval process failed", null));
         }
     }
 

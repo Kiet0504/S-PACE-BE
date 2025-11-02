@@ -285,7 +285,7 @@ public class EventController {
         @ApiResponse(responseCode = "200", description = "Events retrieved successfully"),
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    @PreAuthorize("hasAnyRole('ADMIN', 'COMPANY_ADMIN', 'EVENT_MANAGER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'COMPANY_ADMIN', 'EVENT_MANAGER', 'EMPLOYEE')")
     public ResponseEntity<ResponseDTO<List<EventResponse>>> getEventsByCompany(@PathVariable UUID companyId) {
         try {
             logger.info("Fetching events for company: {}", companyId);

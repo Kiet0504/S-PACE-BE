@@ -9,6 +9,7 @@ import com.example.S_PACE.pojo.EventRegistration;
 import com.example.S_PACE.pojo.User;
 import com.example.S_PACE.repository.EventRegistrationRepository;
 import com.example.S_PACE.repository.EventRepository;
+import com.example.S_PACE.repository.RatingRepository;
 import com.example.S_PACE.repository.UserRepository;
 import com.example.S_PACE.service.EmailService;
 import com.example.S_PACE.service.EventRegistrationService;
@@ -40,6 +41,11 @@ public class EventRegistrationServiceImpl implements EventRegistrationService {
 
     @Autowired
     private EmailService emailService;
+
+    @Autowired
+    private RatingRepository ratingRepository;
+
+    private static final Integer DEFAULT_MIN_TOTAL_RATINGS = 5; // Số lượng rating tối thiểu
 
     @Override
     public EventRegistrationResponse registerForEvent(EventRegisterRequest request, UUID userId) {
@@ -80,6 +86,22 @@ public class EventRegistrationServiceImpl implements EventRegistrationService {
 
         registration = eventRegistrationRepository.save(registration);
         logger.info("Event registration created successfully with ID: {}", registration.getEventRegistrationId());
+
+        // Tự động kiểm tra và duyệt nếu CTV có rating đạt ngưỡng (với tiêu chí mặc định)
+        try {
+            // Sử dụng tiêu chí mặc định: tổng điểm ≥ 16 (4 điểm mỗi cột x 4 cột)
+            autoApproveByRating(registration.getEventRegistrationId(), 
+                                4.0,  // minPunctuality
+                                4.0,  // minQuality
+                                4.0,  // minAttitude
+                                4.0,  // minTeamwork
+                                16.0, // minTotalScore (4 x 4)
+                                DEFAULT_MIN_TOTAL_RATINGS);
+        } catch (Exception e) {
+            logger.warn("Failed to auto-approve registration {} during creation: {}", 
+                registration.getEventRegistrationId(), e.getMessage());
+            // Không throw exception, chỉ log warning để không ảnh hưởng đến flow chính
+        }
 
         return mapToResponse(registration);
     }
@@ -221,5 +243,217 @@ public class EventRegistrationServiceImpl implements EventRegistrationService {
                 .birthYear(registration.getBirthYear())
                 .userAvatar(registration.getUser().getAvatar()) // Add user's avatar
                 .build();
+    }
+
+    @Override
+    @Transactional
+    public EventRegistrationResponse autoApproveByRating(UUID registrationId, 
+                                                         Double minPunctuality, 
+                                                         Double minQuality, 
+                                                         Double minAttitude, 
+                                                         Double minTeamwork, 
+                                                         Double minTotalScore, 
+                                                         Integer minTotalRatings) {
+        logger.info("Attempting to auto-approve registration {} based on rating criteria chosen by BTC", registrationId);
+
+        EventRegistration registration = eventRegistrationRepository.findById(registrationId)
+                .orElseThrow(() -> new IllegalArgumentException("Registration not found"));
+
+        // Chỉ xử lý các đăng ký đang PENDING
+        if (registration.getStatus() != EventRegistrationStatus.PENDING) {
+            logger.debug("Registration {} is not PENDING (current status: {}), skipping auto-approval", 
+                registrationId, registration.getStatus());
+            return null;
+        }
+
+        UUID collaboratorId = registration.getUser().getUserId();
+
+        // Kiểm tra xem BTC đã chọn ít nhất một tiêu chí rating chưa (ngoài minTotalRatings)
+        boolean hasRatingCriteria = minPunctuality != null || minQuality != null || 
+                                   minAttitude != null || minTeamwork != null || minTotalScore != null;
+        
+        if (!hasRatingCriteria) {
+            logger.warn("BTC chưa chọn tiêu chí rating nào cho đăng ký {}. Chỉ kiểm tra số lượng rating.", registrationId);
+            // Vẫn tiếp tục xử lý nhưng chỉ kiểm tra số lượng rating
+        } else {
+            logger.info("BTC đã chọn các tiêu chí rating - Punctuality: {}, Quality: {}, Attitude: {}, Teamwork: {}, TotalScore: {}",
+                minPunctuality, minQuality, minAttitude, minTeamwork, minTotalScore);
+        }
+
+        // Set default cho minTotalRatings
+        if (minTotalRatings == null) {
+            minTotalRatings = DEFAULT_MIN_TOTAL_RATINGS;
+        }
+
+        // Lấy số lượng rating
+        Long totalRatings = ratingRepository.getTotalRatingsByCollaboratorId(collaboratorId);
+        
+        // Kiểm tra số lượng rating tối thiểu
+        if (totalRatings == null || totalRatings < minTotalRatings) {
+            logger.debug("Collaborator {} has insufficient ratings (total: {}, required: {}), not auto-approving",
+                collaboratorId, totalRatings, minTotalRatings);
+            return null;
+        }
+
+        // Lấy average score cho từng cột
+        Double avgPunctuality = ratingRepository.getAveragePunctualityScore(collaboratorId);
+        Double avgQuality = ratingRepository.getAverageQualityScore(collaboratorId);
+        Double avgAttitude = ratingRepository.getAverageAttitudeScore(collaboratorId);
+        Double avgTeamwork = ratingRepository.getAverageTeamworkScore(collaboratorId);
+
+        // Kiểm tra từng cột nếu có yêu cầu
+        if (minPunctuality != null) {
+            if (avgPunctuality == null || avgPunctuality < minPunctuality) {
+                logger.debug("Collaborator {} punctuality score ({}) below threshold ({}), not auto-approving",
+                    collaboratorId, avgPunctuality, minPunctuality);
+                return null;
+            }
+        }
+
+        if (minQuality != null) {
+            if (avgQuality == null || avgQuality < minQuality) {
+                logger.debug("Collaborator {} quality score ({}) below threshold ({}), not auto-approving",
+                    collaboratorId, avgQuality, minQuality);
+                return null;
+            }
+        }
+
+        if (minAttitude != null) {
+            if (avgAttitude == null || avgAttitude < minAttitude) {
+                logger.debug("Collaborator {} attitude score ({}) below threshold ({}), not auto-approving",
+                    collaboratorId, avgAttitude, minAttitude);
+                return null;
+            }
+        }
+
+        if (minTeamwork != null) {
+            if (avgTeamwork == null || avgTeamwork < minTeamwork) {
+                logger.debug("Collaborator {} teamwork score ({}) below threshold ({}), not auto-approving",
+                    collaboratorId, avgTeamwork, minTeamwork);
+                return null;
+            }
+        }
+
+        // Tính tổng điểm (tổng 4 cột)
+        Double totalScore = 0.0;
+        if (avgPunctuality != null) totalScore += avgPunctuality;
+        if (avgQuality != null) totalScore += avgQuality;
+        if (avgAttitude != null) totalScore += avgAttitude;
+        if (avgTeamwork != null) totalScore += avgTeamwork;
+
+        // Kiểm tra tổng điểm nếu có yêu cầu
+        if (minTotalScore != null && totalScore < minTotalScore) {
+            logger.debug("Collaborator {} total score ({}) below threshold ({}), not auto-approving",
+                collaboratorId, totalScore, minTotalScore);
+            return null;
+        }
+
+        // Đạt tất cả điều kiện mà BTC đã chọn, tự động duyệt
+        logger.info("CTV đáp ứng tất cả tiêu chí mà BTC đã chọn. Đang tự động duyệt đăng ký {} cho CTV {} với điểm số - " +
+            "Đúng giờ: {}, Chất lượng: {}, Thái độ: {}, Làm việc nhóm: {}, Tổng điểm: {} ({} tổng số đánh giá)",
+            registrationId, collaboratorId, avgPunctuality, avgQuality, avgAttitude, avgTeamwork, totalScore, totalRatings);
+
+        // Tạo review notes chi tiết về các tiêu chí mà BTC đã chọn
+        StringBuilder reviewNotes = new StringBuilder("Tự động duyệt dựa trên các tiêu chí rating mà BTC đã chọn:\n");
+        reviewNotes.append(String.format("- Đúng giờ: %.2f", avgPunctuality != null ? avgPunctuality : 0.0));
+        if (minPunctuality != null) {
+            reviewNotes.append(String.format(" (BTC yêu cầu: ≥%.2f)", minPunctuality));
+        }
+        reviewNotes.append(String.format("\n- Chất lượng: %.2f", avgQuality != null ? avgQuality : 0.0));
+        if (minQuality != null) {
+            reviewNotes.append(String.format(" (BTC yêu cầu: ≥%.2f)", minQuality));
+        }
+        reviewNotes.append(String.format("\n- Thái độ: %.2f", avgAttitude != null ? avgAttitude : 0.0));
+        if (minAttitude != null) {
+            reviewNotes.append(String.format(" (BTC yêu cầu: ≥%.2f)", minAttitude));
+        }
+        reviewNotes.append(String.format("\n- Làm việc nhóm: %.2f", avgTeamwork != null ? avgTeamwork : 0.0));
+        if (minTeamwork != null) {
+            reviewNotes.append(String.format(" (BTC yêu cầu: ≥%.2f)", minTeamwork));
+        }
+        reviewNotes.append(String.format("\n- Tổng điểm: %.2f", totalScore));
+        if (minTotalScore != null) {
+            reviewNotes.append(String.format(" (BTC yêu cầu: ≥%.2f)", minTotalScore));
+        }
+        reviewNotes.append(String.format("\n- Tổng số đánh giá: %d", totalRatings));
+
+        registration.setStatus(EventRegistrationStatus.APPROVED);
+        registration.setReviewNotes(reviewNotes.toString());
+        registration.setReviewedAt(LocalDateTime.now());
+        // Không set reviewedBy vì đây là tự động
+
+        registration = eventRegistrationRepository.save(registration);
+
+        // Gửi email thông báo
+        try {
+            logger.info("Sending approval email for auto-approved registration: {}", registrationId);
+            emailService.sendRegistrationApprovedEmail(registration);
+        } catch (Exception e) {
+            logger.error("Failed to send approval email for registration: {}. Error: {}",
+                registrationId, e.getMessage(), e);
+            // Continue execution even if email fails
+        }
+
+        logger.info("Registration {} auto-approved successfully", registrationId);
+        return mapToResponse(registration);
+    }
+
+    @Override
+    @Transactional
+    public int autoApproveAllByRating(Double minPunctuality, 
+                                      Double minQuality, 
+                                      Double minAttitude, 
+                                      Double minTeamwork, 
+                                      Double minTotalScore, 
+                                      Integer minTotalRatings) {
+        if (minTotalRatings == null) {
+            minTotalRatings = DEFAULT_MIN_TOTAL_RATINGS;
+        }
+
+        // Kiểm tra xem BTC đã chọn tiêu chí rating nào chưa
+        boolean hasRatingCriteria = minPunctuality != null || minQuality != null || 
+                                   minAttitude != null || minTeamwork != null || minTotalScore != null;
+
+        logger.info("BTC bắt đầu quá trình duyệt nhanh tất cả đăng ký PENDING với các tiêu chí đã chọn - " +
+            "Đúng giờ: {}, Chất lượng: {}, Thái độ: {}, Làm việc nhóm: {}, Tổng điểm: {}, Số lượng rating tối thiểu: {}",
+            minPunctuality, minQuality, minAttitude, minTeamwork, minTotalScore, minTotalRatings);
+        
+        if (!hasRatingCriteria) {
+            logger.warn("Lưu ý: BTC chưa chọn tiêu chí rating nào, sẽ chỉ kiểm tra số lượng rating cho tất cả đăng ký");
+        }
+
+        // Lấy tất cả các đăng ký đang PENDING
+        List<EventRegistration> pendingRegistrations = eventRegistrationRepository
+                .findByStatus(EventRegistrationStatus.PENDING);
+
+        int approvedCount = 0;
+
+        for (EventRegistration registration : pendingRegistrations) {
+            try {
+                // Sử dụng lại logic của autoApproveByRating để kiểm tra từng đăng ký
+                EventRegistrationResponse result = autoApproveByRating(
+                    registration.getEventRegistrationId(),
+                    minPunctuality,
+                    minQuality,
+                    minAttitude,
+                    minTeamwork,
+                    minTotalScore,
+                    minTotalRatings
+                );
+
+                if (result != null) {
+                    approvedCount++;
+                }
+            } catch (Exception e) {
+                logger.error("Error processing registration {} for auto-approval: {}",
+                    registration.getEventRegistrationId(), e.getMessage(), e);
+                // Continue with next registration
+            }
+        }
+
+        logger.info("Hoàn thành quá trình duyệt nhanh. BTC đã chọn tiêu chí và hệ thống đã duyệt {} trên tổng số {} đăng ký đang PENDING",
+            approvedCount, pendingRegistrations.size());
+
+        return approvedCount;
     }
 }

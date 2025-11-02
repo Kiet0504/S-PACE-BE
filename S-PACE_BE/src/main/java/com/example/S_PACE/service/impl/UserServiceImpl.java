@@ -1,8 +1,10 @@
 package com.example.S_PACE.service.impl;
 
 import com.example.S_PACE.dto.request.AdminCreateUserRequest;
+import com.example.S_PACE.dto.request.CreateEmployeeRequest;
 import com.example.S_PACE.dto.request.LoginRequest;
 import com.example.S_PACE.dto.request.SignUpRequest;
+import com.example.S_PACE.dto.request.UpdateEmployeeRequest;
 import com.example.S_PACE.dto.request.UserUpdateRequest;
 import com.example.S_PACE.dto.response.LoginResponse;
 import com.example.S_PACE.dto.response.UserResponse;
@@ -301,6 +303,319 @@ public class UserServiceImpl implements UserService {
         } catch (Exception ex) {
             logger.error("Error during admin user creation: {}", ex.getMessage(), ex);
             throw new RuntimeException("Failed to create user: " + ex.getMessage());
+        }
+    }
+
+    @Override
+    @Transactional
+    public UserResponse createEmployeeForEventManager(UUID eventManagerId, CreateEmployeeRequest createRequest) {
+        logger.info("Event Manager {} creating employee with email: {}", eventManagerId, createRequest.getEmail());
+
+        // Validate input
+        if (createRequest.getEmail() == null || createRequest.getEmail().trim().isEmpty()) {
+            throw new IllegalArgumentException(ErrorStatus.NULL_VALUE.getDescription());
+        }
+
+        // Check if user already exists
+        if (isEmailExists(createRequest.getEmail())) {
+            logger.warn("User with email {} already exists", createRequest.getEmail());
+            throw new IllegalArgumentException(ErrorStatus.USER_ALREADY_EXISTS.getDescription());
+        }
+
+        try {
+            // Get the event manager user to retrieve their company
+            User eventManager = userRepository.findById(eventManagerId)
+                    .orElseThrow(() -> new IllegalArgumentException("Event Manager not found with ID: " + eventManagerId));
+
+            // Verify that the user is an EVENT_MANAGER
+            if (eventManager.getRole() == null || !"EVENT_MANAGER".equals(eventManager.getRole().getRoleName())) {
+                throw new IllegalArgumentException("User is not an Event Manager");
+            }
+
+            // Get the company from event manager
+            if (eventManager.getCompany() == null) {
+                throw new IllegalArgumentException("Event Manager does not have a company assigned");
+            }
+
+            UUID companyId = eventManager.getCompany().getCompanyId();
+            logger.info("Using company ID {} from Event Manager {}", companyId, eventManagerId);
+
+            // Find EMPLOYEE role
+            Role employeeRole = roleRepository.findByRoleName("EMPLOYEE")
+                    .orElseThrow(() -> new IllegalArgumentException("EMPLOYEE role not found"));
+
+            logger.info("Found EMPLOYEE role for employee creation");
+
+            // Create new employee user
+            User employee = new User();
+            employee.setFullName(createRequest.getFullName());
+            employee.setEmail(createRequest.getEmail());
+            employee.setPasswordHash(passwordEncoder.encode(createRequest.getPassword()));
+            employee.setRole(employeeRole);
+            employee.setPhone(createRequest.getPhone());
+            employee.setAddress(createRequest.getAddress());
+            employee.setGender(createRequest.getGender());
+
+            // Set status to ACTIVE
+            employee.setStatus(UserStatus.ACTIVE);
+
+            // Set avatar if provided, otherwise leave null for frontend to handle
+            if (createRequest.getAvatar() != null && !createRequest.getAvatar().trim().isEmpty()) {
+                employee.setAvatar(createRequest.getAvatar());
+            } else {
+                employee.setAvatar(null); // Frontend will handle default avatar display
+            }
+
+            // Assign the event manager's company to the employee
+            Company company = entityManager.getReference(Company.class, companyId);
+            employee.setCompany(company);
+            logger.info("Assigned company ID: {} to employee", companyId);
+
+            // Save employee
+            User savedEmployee = userRepository.save(employee);
+            logger.info("Employee created successfully by Event Manager {} with ID: {}", eventManagerId, savedEmployee.getUserId());
+
+            // Convert to response DTO
+            return userMapper.toUserResponse(savedEmployee);
+
+        } catch (IllegalArgumentException ex) {
+            logger.error("Validation error during employee creation: {}", ex.getMessage());
+            throw ex;
+        } catch (Exception ex) {
+            logger.error("Error during employee creation by Event Manager: {}", ex.getMessage(), ex);
+            throw new RuntimeException("Failed to create employee: " + ex.getMessage());
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<UserResponse> getEmployeesByEventManager(UUID eventManagerId) {
+        logger.info("Event Manager {} fetching employees", eventManagerId);
+
+        try {
+            // Get the event manager user to retrieve their company
+            User eventManager = userRepository.findById(eventManagerId)
+                    .orElseThrow(() -> new IllegalArgumentException("Event Manager not found with ID: " + eventManagerId));
+
+            // Verify that the user is an EVENT_MANAGER
+            if (eventManager.getRole() == null || !"EVENT_MANAGER".equals(eventManager.getRole().getRoleName())) {
+                throw new IllegalArgumentException("User is not an Event Manager");
+            }
+
+            // Get the company from event manager
+            if (eventManager.getCompany() == null) {
+                throw new IllegalArgumentException("Event Manager does not have a company assigned");
+            }
+
+            UUID companyId = eventManager.getCompany().getCompanyId();
+            logger.info("Fetching employees for company ID: {}", companyId);
+
+            // Get all employees in the same company with EMPLOYEE role
+            List<User> employees = userRepository.findByCompanyId(companyId).stream()
+                    .filter(user -> user.getStatus() != UserStatus.DELETED)
+                    .filter(user -> user.getRole() != null && "EMPLOYEE".equals(user.getRole().getRoleName()))
+                    .collect(Collectors.toList());
+
+            logger.info("Found {} employees for Event Manager {}", employees.size(), eventManagerId);
+
+            return employees.stream()
+                    .map(userMapper::toUserResponse)
+                    .collect(Collectors.toList());
+
+        } catch (IllegalArgumentException ex) {
+            logger.error("Validation error: {}", ex.getMessage());
+            throw ex;
+        } catch (Exception ex) {
+            logger.error("Error fetching employees: {}", ex.getMessage(), ex);
+            throw new RuntimeException("Failed to fetch employees: " + ex.getMessage());
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public UserResponse getEmployeeByIdForEventManager(UUID eventManagerId, UUID employeeId) {
+        logger.info("Event Manager {} fetching employee {}", eventManagerId, employeeId);
+
+        try {
+            // Get the event manager user to retrieve their company
+            User eventManager = userRepository.findById(eventManagerId)
+                    .orElseThrow(() -> new IllegalArgumentException("Event Manager not found with ID: " + eventManagerId));
+
+            // Verify that the user is an EVENT_MANAGER
+            if (eventManager.getRole() == null || !"EVENT_MANAGER".equals(eventManager.getRole().getRoleName())) {
+                throw new IllegalArgumentException("User is not an Event Manager");
+            }
+
+            // Get the company from event manager
+            if (eventManager.getCompany() == null) {
+                throw new IllegalArgumentException("Event Manager does not have a company assigned");
+            }
+
+            UUID companyId = eventManager.getCompany().getCompanyId();
+
+            // Get the employee
+            User employee = userRepository.findById(employeeId)
+                    .orElseThrow(() -> new IllegalArgumentException("Employee not found with ID: " + employeeId));
+
+            // Verify employee belongs to the same company and has EMPLOYEE role
+            if (employee.getCompany() == null || !employee.getCompany().getCompanyId().equals(companyId)) {
+                throw new IllegalArgumentException("Employee does not belong to the same company as Event Manager");
+            }
+
+            if (employee.getRole() == null || !"EMPLOYEE".equals(employee.getRole().getRoleName())) {
+                throw new IllegalArgumentException("User is not an Employee");
+            }
+
+            if (employee.getStatus() == UserStatus.DELETED) {
+                throw new IllegalArgumentException("Employee has been deleted");
+            }
+
+            logger.info("Employee {} found for Event Manager {}", employeeId, eventManagerId);
+            return userMapper.toUserResponse(employee);
+
+        } catch (IllegalArgumentException ex) {
+            logger.error("Validation error: {}", ex.getMessage());
+            throw ex;
+        } catch (Exception ex) {
+            logger.error("Error fetching employee: {}", ex.getMessage(), ex);
+            throw new RuntimeException("Failed to fetch employee: " + ex.getMessage());
+        }
+    }
+
+    @Override
+    @Transactional
+    public UserResponse updateEmployeeForEventManager(UUID eventManagerId, UUID employeeId, UpdateEmployeeRequest updateRequest) {
+        logger.info("Event Manager {} updating employee {}", eventManagerId, employeeId);
+
+        try {
+            // Get the event manager user to retrieve their company
+            User eventManager = userRepository.findById(eventManagerId)
+                    .orElseThrow(() -> new IllegalArgumentException("Event Manager not found with ID: " + eventManagerId));
+
+            // Verify that the user is an EVENT_MANAGER
+            if (eventManager.getRole() == null || !"EVENT_MANAGER".equals(eventManager.getRole().getRoleName())) {
+                throw new IllegalArgumentException("User is not an Event Manager");
+            }
+
+            // Get the company from event manager
+            if (eventManager.getCompany() == null) {
+                throw new IllegalArgumentException("Event Manager does not have a company assigned");
+            }
+
+            UUID companyId = eventManager.getCompany().getCompanyId();
+
+            // Get the employee
+            User employee = userRepository.findById(employeeId)
+                    .orElseThrow(() -> new IllegalArgumentException("Employee not found with ID: " + employeeId));
+
+            // Verify employee belongs to the same company and has EMPLOYEE role
+            if (employee.getCompany() == null || !employee.getCompany().getCompanyId().equals(companyId)) {
+                throw new IllegalArgumentException("Employee does not belong to the same company as Event Manager");
+            }
+
+            if (employee.getRole() == null || !"EMPLOYEE".equals(employee.getRole().getRoleName())) {
+                throw new IllegalArgumentException("User is not an Employee");
+            }
+
+            if (employee.getStatus() == UserStatus.DELETED) {
+                throw new IllegalArgumentException("Cannot update deleted employee");
+            }
+
+            // Check if email is being changed and if it already exists
+            if (updateRequest.getEmail() != null && !employee.getEmail().equals(updateRequest.getEmail())) {
+                if (isEmailExists(updateRequest.getEmail(), employeeId)) {
+                    throw new IllegalArgumentException("Email already exists");
+                }
+            }
+
+            // Update employee fields only if provided
+            if (updateRequest.getFullName() != null) {
+                employee.setFullName(updateRequest.getFullName());
+            }
+            if (updateRequest.getEmail() != null) {
+                employee.setEmail(updateRequest.getEmail());
+            }
+            if (updateRequest.getPassword() != null) {
+                employee.setPasswordHash(passwordEncoder.encode(updateRequest.getPassword()));
+            }
+            if (updateRequest.getPhone() != null) {
+                employee.setPhone(updateRequest.getPhone());
+            }
+            if (updateRequest.getAddress() != null) {
+                employee.setAddress(updateRequest.getAddress());
+            }
+            if (updateRequest.getGender() != null) {
+                employee.setGender(updateRequest.getGender());
+            }
+            if (updateRequest.getAvatar() != null) {
+                employee.setAvatar(updateRequest.getAvatar());
+            }
+
+            User updatedEmployee = userRepository.save(employee);
+            logger.info("Employee {} updated successfully by Event Manager {}", employeeId, eventManagerId);
+
+            return userMapper.toUserResponse(updatedEmployee);
+
+        } catch (IllegalArgumentException ex) {
+            logger.error("Validation error: {}", ex.getMessage());
+            throw ex;
+        } catch (Exception ex) {
+            logger.error("Error updating employee: {}", ex.getMessage(), ex);
+            throw new RuntimeException("Failed to update employee: " + ex.getMessage());
+        }
+    }
+
+    @Override
+    @Transactional
+    public void deleteEmployeeForEventManager(UUID eventManagerId, UUID employeeId) {
+        logger.info("Event Manager {} deleting employee {}", eventManagerId, employeeId);
+
+        try {
+            // Get the event manager user to retrieve their company
+            User eventManager = userRepository.findById(eventManagerId)
+                    .orElseThrow(() -> new IllegalArgumentException("Event Manager not found with ID: " + eventManagerId));
+
+            // Verify that the user is an EVENT_MANAGER
+            if (eventManager.getRole() == null || !"EVENT_MANAGER".equals(eventManager.getRole().getRoleName())) {
+                throw new IllegalArgumentException("User is not an Event Manager");
+            }
+
+            // Get the company from event manager
+            if (eventManager.getCompany() == null) {
+                throw new IllegalArgumentException("Event Manager does not have a company assigned");
+            }
+
+            UUID companyId = eventManager.getCompany().getCompanyId();
+
+            // Get the employee
+            User employee = userRepository.findById(employeeId)
+                    .orElseThrow(() -> new IllegalArgumentException("Employee not found with ID: " + employeeId));
+
+            // Verify employee belongs to the same company and has EMPLOYEE role
+            if (employee.getCompany() == null || !employee.getCompany().getCompanyId().equals(companyId)) {
+                throw new IllegalArgumentException("Employee does not belong to the same company as Event Manager");
+            }
+
+            if (employee.getRole() == null || !"EMPLOYEE".equals(employee.getRole().getRoleName())) {
+                throw new IllegalArgumentException("User is not an Employee");
+            }
+
+            if (employee.getStatus() == UserStatus.DELETED) {
+                throw new IllegalArgumentException("Employee is already deleted");
+            }
+
+            // Soft delete by changing status to DELETED
+            employee.setStatus(UserStatus.DELETED);
+            userRepository.save(employee);
+
+            logger.info("Employee {} deleted successfully by Event Manager {}", employeeId, eventManagerId);
+
+        } catch (IllegalArgumentException ex) {
+            logger.error("Validation error: {}", ex.getMessage());
+            throw ex;
+        } catch (Exception ex) {
+            logger.error("Error deleting employee: {}", ex.getMessage(), ex);
+            throw new RuntimeException("Failed to delete employee: " + ex.getMessage());
         }
     }
 
