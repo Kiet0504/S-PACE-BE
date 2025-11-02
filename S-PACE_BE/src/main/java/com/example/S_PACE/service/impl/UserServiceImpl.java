@@ -74,6 +74,9 @@ public class UserServiceImpl implements UserService {
     @Autowired
     private UserMapper userMapper;
 
+    @Autowired
+    private com.example.S_PACE.service.EmailService emailService;
+
     // Avatar will be handled by frontend - no default avatar set in backend
 
     // Google OAuth configuration
@@ -698,5 +701,64 @@ public class UserServiceImpl implements UserService {
         public void setLocale(String locale) { this.locale = locale; }
         public boolean isVerifiedEmail() { return verifiedEmail; }
         public void setVerifiedEmail(boolean verifiedEmail) { this.verifiedEmail = verifiedEmail; }
+    }
+
+    @Override
+    @Transactional
+    public void forgotPassword(String email) {
+        logger.info("Processing forgot password request for email: {}", email);
+
+        // Find user by email
+        User user = userRepository.findByEmail(email)
+            .orElseThrow(() -> {
+                logger.warn("User not found with email: {}", email);
+                return new IllegalArgumentException("Email không tồn tại trong hệ thống");
+            });
+
+        // Generate reset token (UUID + timestamp for expiration check)
+        String resetToken = UUID.randomUUID().toString();
+
+        // Store token in user entity (we'll use a field like resetPasswordToken)
+        user.setResetPasswordToken(resetToken);
+        user.setResetPasswordTokenExpiry(System.currentTimeMillis() + 15 * 60 * 1000); // 15 minutes
+        userRepository.save(user);
+
+        logger.info("Reset token generated for user: {}", email);
+
+        // Send email with reset link
+        emailService.sendPasswordResetEmail(email, resetToken);
+
+        logger.info("Password reset email sent to: {}", email);
+    }
+
+    @Override
+    @Transactional
+    public void resetPassword(String token, String newPassword) {
+        logger.info("Processing password reset with token");
+
+        // Find user by reset token
+        User user = userRepository.findByResetPasswordToken(token)
+            .orElseThrow(() -> {
+                logger.warn("Invalid or expired reset token");
+                return new IllegalArgumentException("Link đặt lại mật khẩu không hợp lệ hoặc đã hết hạn");
+            });
+
+        // Check if token is expired (15 minutes)
+        if (user.getResetPasswordTokenExpiry() == null ||
+            System.currentTimeMillis() > user.getResetPasswordTokenExpiry()) {
+            logger.warn("Reset token expired for user: {}", user.getEmail());
+            throw new IllegalArgumentException("Link đặt lại mật khẩu đã hết hạn. Vui lòng yêu cầu link mới.");
+        }
+
+        // Update password
+        user.setPassword(passwordEncoder.encode(newPassword));
+
+        // Clear reset token
+        user.setResetPasswordToken(null);
+        user.setResetPasswordTokenExpiry(null);
+
+        userRepository.save(user);
+
+        logger.info("Password reset successfully for user: {}", user.getEmail());
     }
 }

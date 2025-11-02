@@ -21,5 +21,8 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     // New methods for UserController
     List<User> findByStatus(UserStatus status);
     List<User> findByRoleRoleName(String roleName);
+
+    // Password reset methods
+    Optional<User> findByResetPasswordToken(String resetPasswordToken);
 }
 

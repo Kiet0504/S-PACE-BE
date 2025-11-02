@@ -1,11 +1,14 @@
 package com.example.S_PACE.controller;
 
+import com.example.S_PACE.dto.request.ForgotPasswordRequest;
 import com.example.S_PACE.dto.request.LoginRequest;
+import com.example.S_PACE.dto.request.ResetPasswordRequest;
 import com.example.S_PACE.dto.request.SignUpRequest;
 import com.example.S_PACE.dto.response.LoginResponse;
 import com.example.S_PACE.dto.response.ResponseDTO;
 import com.example.S_PACE.dto.response.UserResponse;
 import com.example.S_PACE.service.UserService;
+import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -162,6 +165,52 @@ public class AuthController {
             String redirectUrl = "https://s-pace.com.vn/auth/callback?error=" +
                     URLEncoder.encode("Authentication failed: " + e.getMessage(), StandardCharsets.UTF_8.toString());
             response.sendRedirect(redirectUrl);
+        }
+    }
+
+    @PostMapping("/forgot-password")
+    @Operation(summary = "Forgot password", description = "Send password reset email to user")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Password reset email sent successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid email"),
+            @ApiResponse(responseCode = "404", description = "User not found")
+    })
+    public ResponseEntity<ResponseDTO<Void>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        try {
+            logger.info("Forgot password request received for email: {}", request.getEmail());
+            userService.forgotPassword(request.getEmail());
+            return ResponseEntity.ok(new ResponseDTO<>(true, "Email đặt lại mật khẩu đã được gửi. Vui lòng kiểm tra hộp thư của bạn.", null));
+        } catch (IllegalArgumentException ex) {
+            logger.warn("Forgot password error: {}", ex.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(new ResponseDTO<>(false, ex.getMessage(), null));
+        } catch (Exception ex) {
+            logger.error("Forgot password failed: {}", ex.getMessage(), ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ResponseDTO<>(false, "Không thể gửi email đặt lại mật khẩu. Vui lòng thử lại sau.", null));
+        }
+    }
+
+    @PostMapping("/reset-password")
+    @Operation(summary = "Reset password", description = "Reset user password with token")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Password reset successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid or expired token"),
+            @ApiResponse(responseCode = "404", description = "User not found")
+    })
+    public ResponseEntity<ResponseDTO<Void>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        try {
+            logger.info("Reset password request received");
+            userService.resetPassword(request.getToken(), request.getNewPassword());
+            return ResponseEntity.ok(new ResponseDTO<>(true, "Mật khẩu đã được đặt lại thành công. Bạn có thể đăng nhập với mật khẩu mới.", null));
+        } catch (IllegalArgumentException ex) {
+            logger.warn("Reset password error: {}", ex.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(new ResponseDTO<>(false, ex.getMessage(), null));
+        } catch (Exception ex) {
+            logger.error("Reset password failed: {}", ex.getMessage(), ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ResponseDTO<>(false, "Không thể đặt lại mật khẩu. Vui lòng thử lại sau.", null));
         }
     }
 }

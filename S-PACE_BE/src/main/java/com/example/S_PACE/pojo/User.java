@@ -64,8 +64,23 @@ public class User {
     @Column(nullable = false)
     UserStatus status = UserStatus.PENDING;
 
+    @Column(name = "reset_password_token")
+    String resetPasswordToken;
+
+    @Column(name = "reset_password_token_expiry")
+    Long resetPasswordTokenExpiry;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
+    }
+
+    // Custom setter for password to maintain compatibility
+    public void setPassword(String password) {
+        this.passwordHash = password;
+    }
+
+    public String getPassword() {
+        return this.passwordHash;
     }
 }

@@ -77,6 +77,40 @@ public class EmailServiceImpl implements EmailService {
         }
     }
 
+    @Override
+    @Async
+    public void sendPasswordResetEmail(String toEmail, String resetToken) {
+        try {
+            logger.info("Preparing to send password reset email to: {}", toEmail);
+
+            // Prepare email context
+            Context context = new Context();
+            context.setVariable("resetToken", resetToken);
+            context.setVariable("resetLink", "https://s-pace.com.vn/reset-password?token=" + resetToken);
+
+            // Process email template
+            String emailContent = templateEngine.process("email/password-reset", context);
+
+            // Create email message
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setFrom(fromEmail);
+            helper.setTo(toEmail);
+            helper.setSubject("Đặt lại mật khẩu S-PACE");
+            helper.setText(emailContent, true);
+
+            // Send email
+            mailSender.send(message);
+            logger.info("Password reset email sent successfully to: {}", toEmail);
+
+        } catch (MessagingException e) {
+            logger.error("Failed to send password reset email to: {}. Error: {}",
+                toEmail, e.getMessage(), e);
+            throw new RuntimeException("Failed to send password reset email", e);
+        }
+    }
+
     private void saveEmailNotification(EventRegistration eventRegistration, String emailContent) {
         try {
             EmailNotifications notification = new EmailNotifications();
