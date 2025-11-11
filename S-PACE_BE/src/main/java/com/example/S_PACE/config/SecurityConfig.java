@@ -18,6 +18,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpMethod;
 
 @Configuration
 @EnableWebSecurity
@@ -67,6 +68,7 @@ public class SecurityConfig {
                                 "/h2-console/**",
                                 "/actuator/**"
                         ).permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/events").permitAll()
                         .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth2 -> oauth2
