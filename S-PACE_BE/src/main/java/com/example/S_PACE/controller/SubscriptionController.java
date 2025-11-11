@@ -95,6 +95,22 @@ public class SubscriptionController {
         }
     }
 
+    @PostMapping("/cancel-pending-payments")
+    @Operation(summary = "Cancel pending payments", description = "Cancel any pending subscription payments for the current user")
+    public ResponseEntity<ResponseDTO<String>> cancelPendingPayments(HttpServletRequest httpRequest) {
+        try {
+            UUID userId = getUserIdFromToken(httpRequest);
+            subscriptionService.cancelPendingPayments(userId);
+            logger.info("Cancelled pending payments for user: {}", userId);
+            return ResponseEntity.ok(
+                    new ResponseDTO<>(true, "Pending payments cancelled successfully", null));
+        } catch (Exception ex) {
+            logger.error("Error cancelling pending payments: {}", ex.getMessage(), ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ResponseDTO<>(false, "Failed to cancel pending payments", null));
+        }
+    }
+
     private UUID getUserIdFromToken(HttpServletRequest request) {
         String token = getJwtFromRequest(request);
         if (StringUtils.hasText(token)) {

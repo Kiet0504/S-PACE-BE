@@ -1,6 +1,8 @@
 package com.example.S_PACE.controller;
 
 import com.example.S_PACE.dto.response.WebhookResponse;
+import com.example.S_PACE.pojo.SubscriptionPayment;
+import com.example.S_PACE.repository.SubscriptionPaymentRepository;
 import com.example.S_PACE.service.PaymentService;
 import com.example.S_PACE.service.SubscriptionService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -24,6 +26,7 @@ public class PaymentWebhookController {
 
     private final PaymentService paymentService;
     private final SubscriptionService subscriptionService;
+    private final SubscriptionPaymentRepository subscriptionPaymentRepository;
     private final ObjectMapper objectMapper;
 
     /**
@@ -114,6 +117,22 @@ public class PaymentWebhookController {
                         }
                     } else {
                         log.warn("Payment not successful - Code: {}", code);
+
+                        // Handle payment cancellation/failure
+                        if (jsonNode.has("data")) {
+                            com.fasterxml.jackson.databind.JsonNode dataNode = jsonNode.get("data");
+                            if (dataNode.has("orderCode")) {
+                                long orderCode = dataNode.get("orderCode").asLong();
+                                log.info("Payment failed/cancelled for OrderCode: {}", orderCode);
+
+                                try {
+                                    handleFailedPayment(orderCode);
+                                    log.info("✓ Successfully handled failed payment for orderCode: {}", orderCode);
+                                } catch (Exception e) {
+                                    log.error("✗ Error handling failed payment: {}", e.getMessage(), e);
+                                }
+                            }
+                        }
                     }
                 }
             } catch (Exception parseException) {
@@ -177,6 +196,23 @@ public class PaymentWebhookController {
         } catch (Exception e) {
             log.error("✗ Error handling successful payment for orderCode {}: {}",
                     webhookResponse.getOrderCode(), e.getMessage(), e);
+        }
+    }
+
+    private void handleFailedPayment(Long orderCode) {
+        try {
+            log.info("Processing failed/cancelled payment for order: {}", orderCode);
+
+            // Mark the payment as cancelled in database
+            subscriptionPaymentRepository.findByOrderCode(orderCode).ifPresent(payment -> {
+                payment.setStatus(SubscriptionPayment.PaymentStatus.CANCELLED);
+                subscriptionPaymentRepository.save(payment);
+                log.info("✓ Marked subscription payment as CANCELLED for orderCode: {}", orderCode);
+            });
+
+        } catch (Exception e) {
+            log.error("✗ Error handling failed payment for orderCode {}: {}",
+                    orderCode, e.getMessage(), e);
         }
     }
 }

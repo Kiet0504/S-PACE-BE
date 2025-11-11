@@ -17,5 +17,6 @@ public interface SubscriptionService {
     // Payment integration methods
     PayOsResponse createSubscriptionPayment(UUID userId, SubscriptionPurchaseRequest request);
     void confirmSubscriptionPayment(Long orderCode);
+    void cancelPendingPayments(UUID userId);
 }
 

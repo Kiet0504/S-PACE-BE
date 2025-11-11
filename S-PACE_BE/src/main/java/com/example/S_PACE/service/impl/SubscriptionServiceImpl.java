@@ -125,22 +125,19 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         SubscriptionPlan plan = subscriptionPlanRepository.findById(request.getPlanId())
                 .orElseThrow(() -> new IllegalArgumentException("Plan not found"));
 
-        // Check if user already has a pending payment for any plan
-        subscriptionPaymentRepository.findByUserUserIdAndStatus(userId, SubscriptionPayment.PaymentStatus.PENDING)
-                .ifPresent(payment -> {
-                    throw new IllegalArgumentException("You already have a pending payment. Please complete or cancel it first.");
-                });
+        // Cancel any existing pending payments before creating new one
+        cancelPendingPayments(userId);
 
         // Create PayOS payment request
         String description = request.getDescription() != null ? request.getDescription() :
-                "Subscription upgrade to " + plan.getName() + " plan";
+                "Thanh toan goi " + plan.getName() + " S-PACE";
         String returnUrl = request.getReturnUrl() != null ? request.getReturnUrl() :
                 "http://localhost:3000/subscription/success";
         String cancelUrl = request.getCancelUrl() != null ? request.getCancelUrl() :
                 "http://localhost:3000/subscription/cancel";
 
         PayOsRequest payOsRequest = new PayOsRequest(
-                plan.getName() + " Subscription Plan",
+                "Goi " + plan.getName() + " S-PACE",
                 description,
                 plan.getPrice().intValue(),
                 returnUrl,
@@ -184,6 +181,18 @@ public class SubscriptionServiceImpl implements SubscriptionService {
                 .plan(payment.getPlan())
                 .build();
         userSubscriptionRepository.save(userSubscription);
+    }
+
+    @Override
+    @Transactional
+    public void cancelPendingPayments(UUID userId) {
+        subscriptionPaymentRepository.findByUserUserIdAndStatus(userId, SubscriptionPayment.PaymentStatus.PENDING)
+                .ifPresent(payment -> {
+                    payment.setStatus(SubscriptionPayment.PaymentStatus.CANCELLED);
+                    subscriptionPaymentRepository.save(payment);
+                    org.slf4j.LoggerFactory.getLogger(this.getClass())
+                            .info("Cancelled pending payment for user: {} with orderCode: {}", userId, payment.getOrderCode());
+                });
     }
 }
 
