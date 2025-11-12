@@ -91,12 +91,21 @@ check_ssl_certificate() {
 
 # Function to wait for service health
 wait_for_health() {
-    local max_attempts=30
+    local max_attempts=60  # Increased from 30 to 60 (2 minutes total)
     local attempt=1
     
-    print_status "Waiting for application to be healthy..."
+    print_status "Waiting for application to be healthy (this may take up to 2 minutes)..."
     
     while [ $attempt -le $max_attempts ]; do
+        # Check if container is running first
+        if ! docker ps | grep -q s-space-app-prod; then
+            echo -n "x"  # Container not running
+            sleep 2
+            ((attempt++))
+            continue
+        fi
+        
+        # Check health endpoint
         if curl -f http://localhost:8080/actuator/health >/dev/null 2>&1; then
             print_success "Application is healthy!"
             return 0
@@ -107,7 +116,8 @@ wait_for_health() {
         ((attempt++))
     done
     
-    print_error "Health check failed after $max_attempts attempts"
+    print_error "Health check failed after $max_attempts attempts (2 minutes)"
+    print_warning "Application may still be starting. Check logs with: docker-compose -f docker-compose-prod.yml logs -f app"
     return 1
 }
 
@@ -254,14 +264,25 @@ main() {
         
         show_deployment_info
     else
-        print_error "Deployment failed!"
-        echo ""
-        print_status "Container status:"
-        docker-compose -f docker-compose-prod.yml ps
-        echo ""
-        print_status "Application logs:"
-        docker-compose -f docker-compose-prod.yml logs app
-        exit 1
+        print_warning "Health check timed out, but checking if application is actually running..."
+        
+        # Check if application is responding (even if health check failed)
+        sleep 5
+        if curl -f http://localhost:8080/actuator/health >/dev/null 2>&1; then
+            print_success "Application is actually healthy! Health check may have been too aggressive."
+            show_deployment_info
+        else
+            print_error "Deployment failed - application is not responding"
+            echo ""
+            print_status "Container status:"
+            docker-compose -f docker-compose-prod.yml ps
+            echo ""
+            print_status "Recent application logs (last 50 lines):"
+            docker-compose -f docker-compose-prod.yml logs --tail=50 app
+            echo ""
+            print_status "To view full logs, run: docker-compose -f docker-compose-prod.yml logs -f app"
+            exit 1
+        fi
     fi
 }
 
