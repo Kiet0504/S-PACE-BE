@@ -59,4 +59,13 @@ public class Event {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     EventStatus status;
+
+    @Column(name = "max_participants")
+    Integer maxParticipants;
+
+    @Column(columnDefinition = "TEXT")
+    String requirements;
+
+    @Column(name = "contact_info")
+    String contactInfo;
 }
