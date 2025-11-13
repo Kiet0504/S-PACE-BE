@@ -207,7 +207,15 @@ public class EventController {
             @RequestParam("image") MultipartFile imageFile,
             HttpServletRequest request) {
         try {
-            logger.info("Uploading event image");
+            String originalFilename = imageFile.getOriginalFilename();
+            long fileSize = imageFile.getSize();
+            String contentType = imageFile.getContentType();
+            String userAgent = request.getHeader("User-Agent");
+            String authorization = request.getHeader("Authorization");
+            String origin = request.getHeader("Origin");
+            
+            logger.info("Uploading event image: name={}, size={} bytes, contentType={}, userAgent={}, origin={}, hasAuth={}", 
+                originalFilename, fileSize, contentType, userAgent, origin, authorization != null && !authorization.isEmpty());
             
             // Validate file
             if (imageFile.isEmpty()) {
@@ -224,15 +232,21 @@ public class EventController {
             return ResponseEntity.ok(new ResponseDTO<>(true, "Event image uploaded successfully", imageUrl));
             
         } catch (IllegalArgumentException ex) {
-            logger.warn("Event image upload validation error: {}", ex.getMessage());
+            logger.warn("Event image upload validation error: filename={}, size={}, contentType={}, error={}", 
+                imageFile.getOriginalFilename(), imageFile.getSize(), imageFile.getContentType(), ex.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(new ResponseDTO<>(false, ex.getMessage(), null));
         } catch (IOException ex) {
-            logger.error("File upload error: {}", ex.getMessage(), ex);
+            logger.error("File upload error: filename={}, size={}, contentType={}, error={}", 
+                imageFile.getOriginalFilename(), imageFile.getSize(), imageFile.getContentType(), ex.getMessage(), ex);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(new ResponseDTO<>(false, "Failed to upload event image: " + ex.getMessage(), null));
         } catch (Exception ex) {
-            logger.error("Error uploading event image: {}", ex.getMessage(), ex);
+            logger.error("Error uploading event image: filename={}, size={}, contentType={}, error={}", 
+                imageFile != null ? imageFile.getOriginalFilename() : "unknown", 
+                imageFile != null ? imageFile.getSize() : 0, 
+                imageFile != null ? imageFile.getContentType() : "unknown", 
+                ex.getMessage(), ex);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(new ResponseDTO<>(false, "Failed to upload event image", null));
         }

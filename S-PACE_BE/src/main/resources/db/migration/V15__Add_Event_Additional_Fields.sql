@@ -18,3 +18,4 @@ COMMENT ON COLUMN event.max_participants IS 'Maximum number of participants allo
 COMMENT ON COLUMN event.requirements IS 'Requirements for participants to join the event';
 COMMENT ON COLUMN event.contact_info IS 'Contact information for the event';
 
+

@@ -246,21 +246,82 @@ public class AwsS3CloudStorageService implements CloudStorageService {
 
     private void validateFile(MultipartFile file, List<String> allowedTypes, String fileType) {
         if (file.isEmpty()) {
+            logger.warn("File validation failed: File is empty");
             throw new IllegalArgumentException("File is empty");
         }
 
-        if (file.getSize() > MAX_FILE_SIZE) {
+        long fileSize = file.getSize();
+        String originalFilename = file.getOriginalFilename();
+        String contentType = file.getContentType();
+        
+        logger.info("Validating {} file: name={}, size={} bytes, contentType={}", 
+            fileType, originalFilename, fileSize, contentType);
+
+        if (fileSize > MAX_FILE_SIZE) {
+            logger.warn("File validation failed: File size {} bytes exceeds maximum {} bytes", 
+                fileSize, MAX_FILE_SIZE);
             throw new IllegalArgumentException(
                 String.format("File size too large. Maximum size is %dMB", MAX_FILE_SIZE / (1024 * 1024))
             );
         }
 
-        String contentType = file.getContentType();
-        if (contentType == null || !allowedTypes.contains(contentType.toLowerCase())) {
+        String fileExtension = getFileExtension(originalFilename).toLowerCase();
+        
+        // Normalize content type (some browsers send "image/jpg" instead of "image/jpeg")
+        String normalizedContentType = normalizeContentType(contentType);
+        
+        // Map file extensions to content types for validation
+        boolean isValidByContentType = normalizedContentType != null && 
+            allowedTypes.contains(normalizedContentType.toLowerCase());
+        boolean isValidByExtension = false;
+        
+        // Check by extension if content type validation fails or is null
+        if (!isValidByContentType) {
+            List<String> imageExtensions = Arrays.asList(".jpg", ".jpeg", ".png", ".gif", ".webp");
+            List<String> docExtensions = Arrays.asList(".pdf", ".doc", ".docx");
+            
+            if (fileType.contains("image") || fileType.contains("event") || fileType.contains("avatar")) {
+                isValidByExtension = imageExtensions.contains(fileExtension);
+            } else if (fileType.contains("certificate")) {
+                isValidByExtension = imageExtensions.contains(fileExtension) || docExtensions.contains(fileExtension);
+            } else if (fileType.contains("cv") || fileType.contains("document")) {
+                isValidByExtension = docExtensions.contains(fileExtension);
+            }
+        }
+        
+        if (!isValidByContentType && !isValidByExtension) {
+            logger.warn("File validation failed: originalContentType={}, normalizedContentType={}, extension={}, allowedTypes={}", 
+                contentType, normalizedContentType, fileExtension, allowedTypes);
             throw new IllegalArgumentException(
-                String.format("Invalid %s file type. Allowed types: %s", fileType, allowedTypes)
+                String.format("Invalid %s file type. Content-Type: %s, Extension: %s. Allowed types: %s", 
+                    fileType, contentType != null ? contentType : "null", fileExtension, allowedTypes)
             );
         }
+        
+        logger.info("File validation passed for {}: originalContentType={}, normalizedContentType={}, extension={}", 
+            fileType, contentType, normalizedContentType, fileExtension);
+    }
+    
+    /**
+     * Normalize content type to handle browser variations
+     * Some browsers send "image/jpg" instead of "image/jpeg"
+     */
+    private String normalizeContentType(String contentType) {
+        if (contentType == null) {
+            return null;
+        }
+        
+        String normalized = contentType.toLowerCase().trim();
+        
+        // Normalize common variations
+        if (normalized.equals("image/jpg")) {
+            return "image/jpeg";
+        }
+        
+        // Handle cases where browser sends "application/octet-stream" for images
+        // We'll rely on extension validation in that case
+        
+        return normalized;
     }
 
     private String getFileExtension(String filename) {

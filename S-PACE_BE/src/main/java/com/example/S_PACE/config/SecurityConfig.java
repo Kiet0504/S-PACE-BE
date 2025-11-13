@@ -27,11 +27,14 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final OAuth2SuccessHandler oAuth2SuccessHandler;
+    private final RestAuthenticationEntryPoint restAuthenticationEntryPoint;
 
     public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter, 
-                         OAuth2SuccessHandler oAuth2SuccessHandler) {
+                         OAuth2SuccessHandler oAuth2SuccessHandler,
+                         RestAuthenticationEntryPoint restAuthenticationEntryPoint) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.oAuth2SuccessHandler = oAuth2SuccessHandler;
+        this.restAuthenticationEntryPoint = restAuthenticationEntryPoint;
     }
 
     @Value("${app.cors.allowed-origins:https://s-pace.com.vn,https://www.s-pace.com.vn,https://api.s-pace.com.vn}")
@@ -75,6 +78,9 @@ public class SecurityConfig {
                         .successHandler(oAuth2SuccessHandler)
                         .defaultSuccessUrl("/api/auth/google/callback", true)
                         .failureUrl("/api/auth/google/error")
+                )
+                .exceptionHandling(exceptions -> exceptions
+                        .authenticationEntryPoint(restAuthenticationEntryPoint)
                 )
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
