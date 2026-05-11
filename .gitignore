@@ -22,3 +22,18 @@
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 replay_pid*
+
+# Build artifacts
+target/
+out/
+
+# IDE files
+.idea/
+.vscode/
+*.iml
+
+# Configuration files
+application-prod.yml
+application-dev.yml
+.env
+.env.*
